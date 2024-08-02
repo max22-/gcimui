@@ -1,6 +1,7 @@
 #include <raylib.h>
 #define UI_IMPLEMENTATION
 #include "ui.h"
+#include "backend.h"
 #include <stdio.h>
 
 #define TFT_WIDTH 320
