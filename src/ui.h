@@ -28,13 +28,13 @@ void ui_end(ui_ctx *ctx);
 extern void draw_rectangle(int x, int y, int w, int h, ui_color color);
 extern void fill_rectangle(int x, int y, int w, int h, ui_color color);
 enum UI_KEY {
-    UI_KEY_NONE,
-    UI_KEY_UP,
-    UI_KEY_DOWN,
-    UI_KEY_LEFT,
-    UI_KEY_RIGHT,
-    UI_KEY_ENTER,
-    UI_KEY_BACK
+    UI_KEY_NONE = 0,
+    UI_KEY_UP = 1 << 0,
+    UI_KEY_DOWN = 1 << 1,
+    UI_KEY_LEFT = 1 << 2,
+    UI_KEY_RIGHT = 1 << 3,
+    UI_KEY_ENTER = 1 << 4,
+    UI_KEY_BACK = 1 << 5
 };
 void ui_set_key(ui_ctx *ctx, enum UI_KEY key_pressed);
 /* ************************************************************************** */
@@ -87,7 +87,7 @@ typedef struct WidgetLocation {
 
 struct UIContext {
     int cursor_x, cursor_y;
-    enum UI_KEY key_pressed;
+    uint8_t pressed_keys;
     int hot_item, active_item;
     /*[[[cog
     gen_stacks()
@@ -157,7 +157,7 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
 ui_ctx new_uicontext() {
     ui_ctx ctx;
     ctx.cursor_x = ctx.cursor_y = 0;
-    ctx.key_pressed = UI_KEY_NONE;
+    ctx.pressed_keys = UI_KEY_NONE;
     ctx.hot_item = ctx.active_item = -1;
     /*[[[cog 
     init_stacks()
@@ -167,40 +167,37 @@ ui_ctx new_uicontext() {
     return ctx;
 }
 
-void ui_set_key(ui_ctx *ctx, enum UI_KEY key_pressed) {
-    ctx->key_pressed = key_pressed;
+void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key) {
+    ctx->pressed_keys |= pressed_key;
 }
 
 void ui_begin(ui_ctx *ctx) {
-    ctx->key_pressed = UI_KEY_NONE;
+    ctx->pressed_keys = UI_KEY_NONE;
     //ctx->hot_item = -1;
     ctx->widgets_locations.idx = 0;
 }
 
 void ui_end(ui_ctx *ctx) {
-    if(ctx->key_pressed != UI_KEY_ENTER)
+    if(!(ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = -1;
-    switch(ctx->key_pressed) {
-    case UI_KEY_UP:
-        ui_update_hot_item_by_direction(ctx, (ui_vec2){0, -1});
-        break;
-     case UI_KEY_DOWN:
-        ui_update_hot_item_by_direction(ctx, (ui_vec2){0, 1});
-        break;
-     case UI_KEY_LEFT:
-        ui_update_hot_item_by_direction(ctx, (ui_vec2){-1, 0});
-        break;
-     case UI_KEY_RIGHT:
-        ui_update_hot_item_by_direction(ctx, (ui_vec2){1, 0});
-        break;
-    }
+    ui_vec2 dir = {0, 0};
+    if(ctx->pressed_keys & UI_KEY_UP)
+        dir.y--;
+    if(ctx->pressed_keys & UI_KEY_DOWN)
+        dir.y++;
+    if(ctx->pressed_keys & UI_KEY_LEFT)
+        dir.x--;
+    if(ctx->pressed_keys & UI_KEY_RIGHT)
+        dir.x++;
+    if(dir.x != 0 || dir.y != 0)
+        ui_update_hot_item_by_direction(ctx, dir);
 }
 
 /* Widgets ****************************************************************** */
 
 bool button(ui_ctx *ctx, int id, int x, int y, int w, int h) {
     new_widget(ctx, id);
-    if(ctx->hot_item == id && ctx->key_pressed == UI_KEY_ENTER)
+    if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = id;
     fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
@@ -208,7 +205,7 @@ bool button(ui_ctx *ctx, int id, int x, int y, int w, int h) {
     else if(ctx->hot_item == id)
         draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
     ui_widgets_locations_push(ctx, (widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}});
-    return ctx->key_pressed != UI_KEY_ENTER && ctx->hot_item == id && ctx->active_item == id;
+    return !(ctx->pressed_keys & UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
 }
 
 #endif
