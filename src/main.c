@@ -16,11 +16,11 @@ int main(void) {
         ui_begin(&ctx);
         handle_keys(&ctx);
         ClearBackground(BLACK);
-        if(button(&ctx, GEN_ID, 10, 10, 50, 20))
+        if(button(&ctx, GEN_ID, "Button 1", 10, 10))
             printf("Button 1 clicked!\n");
-        if(button(&ctx, GEN_ID, 70, 10, 50, 20))
+        if(button(&ctx, GEN_ID, "Button 2", 100, 10))
             printf("Button 2 clicked!\n");
-        if(button(&ctx, GEN_ID, 70, 40, 50, 20))
+        if(button(&ctx, GEN_ID, "Button 3", 100, 40))
             printf("Button 3 clicked!\n");
         EndDrawing();
         ui_end(&ctx);

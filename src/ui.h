@@ -21,12 +21,16 @@ void ui_end(ui_ctx *ctx);
 
 /* Macros ******************************************************************* */
 #define UI_WIDGETS_MAX 1000
+#define UI_MARGIN 2
+#define UI_FONT_SIZE 16
 #define GEN_ID (__LINE__)
 /* ************************************************************************** */
 
 /* Backend ****************************************************************** */
 extern void draw_rectangle(int x, int y, int w, int h, ui_color color);
 extern void fill_rectangle(int x, int y, int w, int h, ui_color color);
+extern void draw_text(const char *msg, int x, int y, int font_size, ui_color color);
+extern int get_text_width(const char *text, int font_size);
 enum UI_KEY {
     UI_KEY_NONE = 0,
     UI_KEY_UP = 1 << 0,
@@ -49,7 +53,7 @@ void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key);
 /* ************************************************************************** */
 
 /* Widgets ****************************************************************** */
-bool button(ui_ctx *ctx, int id, int x, int y, int w, int h);
+bool button(ui_ctx *ctx, int id, const char *label, int x, int y);
 /* ************************************************************************** */
 
 
@@ -193,15 +197,18 @@ void ui_end(ui_ctx *ctx) {
 
 /* Widgets ****************************************************************** */
 
-bool button(ui_ctx *ctx, int id, int x, int y, int w, int h) {
+bool button(ui_ctx *ctx, int id, const char *label, int x, int y) {
     new_widget(ctx, id);
     if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = id;
+    int w = get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
+    int h = UI_FONT_SIZE + 2 * UI_MARGIN;
     fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         draw_rectangle(x, y, w, h, UI_COLOR_RED);
     else if(ctx->hot_item == id)
         draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
+    draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
     ui_widgets_locations_push(ctx, (widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}});
     return !(ctx->pressed_keys & UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
 }
