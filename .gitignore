@@ -1,4 +1,4 @@
 bin
 build
 .venv
-.vscode/settings.json
+.vscode
