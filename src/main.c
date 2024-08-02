@@ -13,18 +13,7 @@ int main(void) {
     ui_ctx ctx = new_uicontext();
     while (!WindowShouldClose()) {
         ui_begin(&ctx);
-        if(IsKeyDown(KEY_UP))
-            ui_set_key(&ctx, UI_KEY_UP);
-        else if(IsKeyDown(KEY_DOWN))
-            ui_set_key(&ctx, UI_KEY_DOWN);
-        else if(IsKeyDown(KEY_LEFT))
-            ui_set_key(&ctx, UI_KEY_LEFT);
-        else if(IsKeyPressed(KEY_RIGHT))
-            ui_set_key(&ctx, UI_KEY_RIGHT);
-        else if(IsKeyDown(KEY_ENTER))
-            ui_set_key(&ctx, UI_KEY_ENTER);
-        else if(IsKeyDown(KEY_BACKSPACE))
-            ui_set_key(&ctx, UI_KEY_BACK);
+        handle_keys(&ctx);
         ClearBackground(BLACK);
         if(button(&ctx, GEN_ID, 10, 10, 50, 20))
             printf("Button 1 clicked!\n");
