@@ -86,7 +86,6 @@ typedef struct WidgetLocation {
 } widget_location;
 
 struct UIContext {
-    int cursor_x, cursor_y;
     uint8_t pressed_keys;
     int hot_item, active_item;
     /*[[[cog
@@ -156,7 +155,6 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
 
 ui_ctx new_uicontext() {
     ui_ctx ctx;
-    ctx.cursor_x = ctx.cursor_y = 0;
     ctx.pressed_keys = UI_KEY_NONE;
     ctx.hot_item = ctx.active_item = -1;
     /*[[[cog 
