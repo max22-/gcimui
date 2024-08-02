@@ -36,7 +36,7 @@ enum UI_KEY {
     UI_KEY_ENTER = 1 << 4,
     UI_KEY_BACK = 1 << 5
 };
-void ui_set_key(ui_ctx *ctx, enum UI_KEY key_pressed);
+void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key);
 /* ************************************************************************** */
 
 /* Colors ******************************************************************* */
