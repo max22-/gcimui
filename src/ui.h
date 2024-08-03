@@ -18,7 +18,6 @@ typedef struct UIVec2 {
 
 typedef unsigned int ui_id;
 
-ui_ctx ui_context_new();
 void ui_begin(ui_ctx *ctx);
 void ui_end(ui_ctx *ctx);
 ui_id ui_get_id(ui_ctx *ctx, const void *data, size_t size);
@@ -30,6 +29,8 @@ void ui_pop_id(ui_ctx *ctx);
 #define UI_ID_STACK_SIZE 32
 #define UI_MARGIN 2
 #define UI_FONT_SIZE 16
+#define UI_KEY_REPEAT_DELAY 500 // ms
+#define UI_KEY_REPEAT_INTERVAL 30 // ms
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define ui_assert(x)                                                            \
     do {                                                                        \
@@ -60,15 +61,15 @@ extern int ui_get_text_width(const char *text, int font_size);
 extern unsigned long ui_millis();
 extern void ui_error(const char *fmt, ...);
 enum UI_KEY {
-    UI_KEY_NONE = 0,
-    UI_KEY_UP = 1 << 0,
-    UI_KEY_DOWN = 1 << 1,
-    UI_KEY_LEFT = 1 << 2,
-    UI_KEY_RIGHT = 1 << 3,
-    UI_KEY_ENTER = 1 << 4,
-    UI_KEY_BACK = 1 << 5
+    UI_KEY_NONE,
+    UI_KEY_UP,
+    UI_KEY_DOWN,
+    UI_KEY_LEFT,
+    UI_KEY_RIGHT,
+    UI_KEY_ENTER,
+    UI_KEY_BACK,
 };
-void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key);
+void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state);
 /* ************************************************************************** */
 
 /* Colors ******************************************************************* */
@@ -87,13 +88,20 @@ bool button(ui_ctx *ctx, const char *label, int x, int y);
 
 #ifdef UI_IMPLEMENTATION
 
+struct Input {
+    uint8_t state, new_state, events; // state: saved key states, new_state: updated key states, events: detects rising edges of keys
+    unsigned long timestamp;
+    bool is_repeat;
+};
+
 typedef struct WidgetLocation {
     ui_vec2 vec;
     ui_id id;
 } widget_location;
 
+// Warning : make sure that the context is valid when zero-initialized !!!
 struct UIContext {
-    uint8_t pressed_keys;
+    struct Input input;
     ui_id hot_item, active_item;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
     ui_stack(ui_id, UI_ID_STACK_SIZE) id_stack;
@@ -148,37 +156,55 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
         ctx->hot_item = best_id;
 }
 
-ui_ctx ui_context_new() {
-    ui_ctx ctx;
-    ctx.pressed_keys = UI_KEY_NONE;
-    ctx.hot_item = ctx.active_item = 0;
-    return ctx;
+static inline bool ui_key_event(ui_ctx *ctx, enum UI_KEY key) {
+    return (ctx->input.events & (1 << key)) != 0;
 }
 
-void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key) {
-    ctx->pressed_keys |= pressed_key;
+void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state) {
+    uint8_t mask = ~(1 << key);
+    ctx->input.new_state &= mask;
+    ctx->input.new_state |= (state ? 1 : 0) << key;
 }
 
 void ui_begin(ui_ctx *ctx) {
-    ctx->pressed_keys = UI_KEY_NONE;
-    //ctx->hot_item = -1;
     ctx->widgets_locations.idx = 0;
+    { /* Input handling ************** */
+        ctx->input.events = ~ctx->input.state & ctx->input.new_state; // detect rising edge
+        if(ctx->input.events != 0)
+            ctx->input.timestamp = ui_millis(); // we reset the timestamp when new keys are pressed
+        if(ctx->input.new_state == 0)
+            ctx->input.is_repeat = false;
+        if(ctx->input.is_repeat) { // a repetition has already started
+            if(ui_millis() - ctx->input.timestamp > UI_KEY_REPEAT_INTERVAL) {
+                ctx->input.events |= ctx->input.new_state;
+                ctx->input.timestamp = ui_millis();
+            }
+        } else { // we check if we need to start a key repetition
+            if((ctx->input.state & ctx->input.new_state) && ui_millis() - ctx->input.timestamp > UI_KEY_REPEAT_DELAY) {
+                ctx->input.events |= ctx->input.new_state;
+                ctx->input.is_repeat = true;
+                ctx->input.timestamp = ui_millis();
+            }
+        }
+    } /* End of input handling ******* */
+
 }
 
 void ui_end(ui_ctx *ctx) {
-    if(!(ctx->pressed_keys & UI_KEY_ENTER))
+    if(!ui_key_event(ctx, UI_KEY_ENTER))
         ctx->active_item = 0;
     ui_vec2 dir = {0, 0};
-    if(ctx->pressed_keys & UI_KEY_UP)
+    if(ui_key_event(ctx, UI_KEY_UP))
         dir.y--;
-    if(ctx->pressed_keys & UI_KEY_DOWN)
+    if(ui_key_event(ctx, UI_KEY_DOWN))
         dir.y++;
-    if(ctx->pressed_keys & UI_KEY_LEFT)
+    if(ui_key_event(ctx, UI_KEY_LEFT))
         dir.x--;
-    if(ctx->pressed_keys & UI_KEY_RIGHT)
+    if(ui_key_event(ctx, UI_KEY_RIGHT))
         dir.x++;
     if(dir.x != 0 || dir.y != 0)
         ui_update_hot_item_by_direction(ctx, dir);
+    ctx->input.state = ctx->input.new_state;
 }
 
 /* id stuff, inspired by microui ******************************************** */
@@ -213,7 +239,7 @@ void ui_pop_id(ui_ctx *ctx) {
 bool button(ui_ctx *ctx, const char *label, int x, int y) {
     ui_id id = ui_get_id(ctx, label, strlen(label));
     new_widget(ctx, id);
-    if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
+    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
         ctx->active_item = id;
     int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
     int h = UI_FONT_SIZE + 2 * UI_MARGIN;
@@ -224,7 +250,7 @@ bool button(ui_ctx *ctx, const char *label, int x, int y) {
         ui_draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
     ui_draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
     ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
-    return !(ctx->pressed_keys & UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
+    return !ui_key_event(ctx, UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
 }
 
 #endif

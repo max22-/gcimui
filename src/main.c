@@ -11,10 +11,10 @@
 int main(void) {
     InitWindow(TFT_WIDTH, TFT_HEIGHT, "ui");
     SetTargetFPS(60);
-    ui_ctx ctx = ui_context_new();
+    ui_ctx ctx = {0};
     while (!WindowShouldClose()) {
-        ui_begin(&ctx);
         handle_keys(&ctx);
+        ui_begin(&ctx);
         ClearBackground(BLACK);
         char label[32];
         for(int y = 0; y < 4; y++) {

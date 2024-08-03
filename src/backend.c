@@ -22,7 +22,7 @@ int ui_get_text_width(const char *text, int font_size) {
 }
 
 unsigned long ui_millis() {
-    return clock() / (CLOCKS_PER_SEC / 1000);
+    return GetTime() * 1000;
 }
 
 void ui_error(const char *fmt, ...) {
@@ -35,16 +35,10 @@ void ui_error(const char *fmt, ...) {
 }
 
 void handle_keys(ui_ctx *ctx) {
-    if(IsKeyDown(KEY_UP))
-        ui_set_key(ctx, UI_KEY_UP);
-    if(IsKeyDown(KEY_DOWN))
-        ui_set_key(ctx, UI_KEY_DOWN);
-    if(IsKeyDown(KEY_LEFT))
-        ui_set_key(ctx, UI_KEY_LEFT);
-    if(IsKeyDown(KEY_RIGHT))
-        ui_set_key(ctx, UI_KEY_RIGHT);
-    if(IsKeyDown(KEY_ENTER))
-        ui_set_key(ctx, UI_KEY_ENTER);
-    if(IsKeyDown(KEY_BACKSPACE))
-        ui_set_key(ctx, UI_KEY_BACK);
+    ui_set_key_state(ctx, UI_KEY_UP, IsKeyDown(KEY_UP));
+    ui_set_key_state(ctx, UI_KEY_DOWN, IsKeyDown(KEY_DOWN));
+    ui_set_key_state(ctx, UI_KEY_LEFT, IsKeyDown(KEY_LEFT));
+    ui_set_key_state(ctx, UI_KEY_RIGHT, IsKeyDown(KEY_RIGHT));
+    ui_set_key_state(ctx, UI_KEY_ENTER, IsKeyDown(KEY_ENTER));
+    ui_set_key_state(ctx, UI_KEY_BACK, IsKeyDown(KEY_BACKSPACE));
 }
