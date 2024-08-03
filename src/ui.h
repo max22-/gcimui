@@ -24,6 +24,25 @@ void ui_end(ui_ctx *ctx);
 #define UI_MARGIN 2
 #define UI_FONT_SIZE 16
 #define GEN_ID (__LINE__)
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define ui_assert(x)                                                            \
+    do {                                                                        \
+        if(!(x))                                                                \
+            ui_error("%s:%d: assertion '%s' failed", __FILE__, __LINE__, #x);   \
+    } while(0)
+#define ui_stack(T, capacity) struct { int idx; T items[capacity]; }
+#define ui_push(s, val)                             \
+    do {                                            \
+        ui_assert((s).idx < ARRAY_SIZE((s).items)); \
+        (s).items[(s).idx] = (val);                 \
+        (s).idx++;                                  \
+    } while(0)
+#define ui_pop(s)               \
+    do {                        \
+        ui_assert((s).idx > 0); \
+        (s).idx--;              \
+    } while(0)
+
 /* ************************************************************************** */
 
 /* Backend ****************************************************************** */
@@ -31,6 +50,7 @@ extern void draw_rectangle(int x, int y, int w, int h, ui_color color);
 extern void fill_rectangle(int x, int y, int w, int h, ui_color color);
 extern void draw_text(const char *msg, int x, int y, int font_size, ui_color color);
 extern int get_text_width(const char *text, int font_size);
+extern void ui_error(const char *fmt, ...);
 enum UI_KEY {
     UI_KEY_NONE = 0,
     UI_KEY_UP = 1 << 0,
@@ -57,31 +77,6 @@ bool button(ui_ctx *ctx, int id, const char *label, int x, int y);
 /* ************************************************************************** */
 
 
-/*[[[cog
-import cog
-stacks = [
-    {'name': 'widgets_locations', 'type': 'widget_location', 'capacity': 'UI_WIDGETS_MAX', 'arg_name': 'w_loc'}
-]
-
-def gen_stacks():
-    for s in stacks:
-        cog.outl(f'    struct {{ int idx; {s["type"]} items[{s["capacity"]}]; size_t capacity; }} {s["name"]};')
-
-def gen_push():
-    for s in stacks:
-        cog.outl(f'static void ui_{s["name"]}_push(ui_ctx *ctx, {s["type"]} {s["arg_name"]}) {{')
-        cog.outl(f'    if(ctx->{s["name"]}.idx < ctx->{s["name"]}.capacity)')
-        cog.outl(f'        ctx->{s["name"]}.items[ctx->{s["name"]}.idx++] = {s["arg_name"]};')
-        cog.outl('}')
-
-def init_stacks():
-    for s in stacks:
-        cog.outl(f'    ctx.{s["name"]}.capacity = {s["capacity"]};')
-
-]]]*/
-// [[[end]]]
-
-
 #ifdef UI_IMPLEMENTATION
 
 typedef struct WidgetLocation {
@@ -92,26 +87,14 @@ typedef struct WidgetLocation {
 struct UIContext {
     uint8_t pressed_keys;
     int hot_item, active_item;
-    /*[[[cog
-    gen_stacks()
-    ]]]*/
-    struct { int idx; widget_location items[UI_WIDGETS_MAX]; size_t capacity; } widgets_locations;
-   //[[[end]]]
+    ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
+    ui_stack(unsigned int, UI_WIDGETS_MAX) id_stack;
 };
 
 void new_widget(ui_ctx *ctx, int id) {
     if(ctx->hot_item == -1)
         ctx->hot_item = id;
 }
-
-/*[[[cog
-gen_push()
-]]]*/
-static void ui_widgets_locations_push(ui_ctx *ctx, widget_location w_loc) {
-    if(ctx->widgets_locations.idx < ctx->widgets_locations.capacity)
-        ctx->widgets_locations.items[ctx->widgets_locations.idx++] = w_loc;
-}
-///[[[end]]]
 
 static widget_location *ui_get_widget_location(ui_ctx *ctx, int id) {
     for(int i = 0; i < ctx->widgets_locations.idx; i++) {
@@ -161,11 +144,6 @@ ui_ctx new_uicontext() {
     ui_ctx ctx;
     ctx.pressed_keys = UI_KEY_NONE;
     ctx.hot_item = ctx.active_item = -1;
-    /*[[[cog 
-    init_stacks()
-    ]]]*/
-    ctx.widgets_locations.capacity = UI_WIDGETS_MAX;
-    //[[[end]]]
     return ctx;
 }
 
@@ -209,7 +187,7 @@ bool button(ui_ctx *ctx, int id, const char *label, int x, int y) {
     else if(ctx->hot_item == id)
         draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
     draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
-    ui_widgets_locations_push(ctx, (widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}});
+    ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
     return !(ctx->pressed_keys & UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
 }
 
