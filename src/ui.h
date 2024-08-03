@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <string.h>
 
 typedef struct UIContext ui_ctx;
 typedef struct UIColor {
@@ -20,12 +21,15 @@ typedef unsigned int ui_id;
 ui_ctx ui_context_new();
 void ui_begin(ui_ctx *ctx);
 void ui_end(ui_ctx *ctx);
+ui_id ui_get_id(ui_ctx *ctx, const void *data, size_t size);
+void ui_push_id(ui_ctx *ctx, const void *data, size_t size);
+void ui_pop_id(ui_ctx *ctx);
 
 /* Macros ******************************************************************* */
 #define UI_WIDGETS_MAX 1000
+#define UI_ID_STACK_SIZE 32
 #define UI_MARGIN 2
 #define UI_FONT_SIZE 16
-#define GEN_ID (__LINE__)
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define ui_assert(x)                                                            \
     do {                                                                        \
@@ -76,7 +80,7 @@ void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key);
 /* ************************************************************************** */
 
 /* Widgets ****************************************************************** */
-bool button(ui_ctx *ctx, ui_id id, const char *label, int x, int y);
+bool button(ui_ctx *ctx, const char *label, int x, int y);
 /* ************************************************************************** */
 
 
@@ -91,7 +95,7 @@ struct UIContext {
     uint8_t pressed_keys;
     ui_id hot_item, active_item;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
-    ui_stack(ui_id, UI_WIDGETS_MAX) id_stack;
+    ui_stack(ui_id, UI_ID_STACK_SIZE) id_stack;
 };
 
 void new_widget(ui_ctx *ctx, ui_id id) {
@@ -176,9 +180,37 @@ void ui_end(ui_ctx *ctx) {
         ui_update_hot_item_by_direction(ctx, dir);
 }
 
+/* id stuff, inspired by microui ******************************************** */
+
+/* 32bit fnv-1a hash */
+#define FNV_PRIME 16777619
+#define FNV_OFFSET_BASIS 2166136261
+static ui_id hash(ui_id id, const void *data, size_t size) {
+    const unsigned char *p = data;
+    while(size--) 
+        id = (id ^ *p++) * FNV_PRIME;
+    return id;
+}
+
+ui_id ui_get_id(ui_ctx *ctx, const void *data, size_t size) {
+    int idx = ctx->id_stack.idx;
+    ui_id res = (idx > 0) ? ctx->id_stack.items[idx - 1] : FNV_OFFSET_BASIS;
+    res = hash(res, data, size);
+    return res;
+}
+
+void ui_push_id(ui_ctx *ctx, const void *data, size_t size) {
+    ui_push(ctx->id_stack, ui_get_id(ctx, data, size));
+}
+
+void ui_pop_id(ui_ctx *ctx) {
+    ui_pop(ctx->id_stack);
+}
+
 /* Widgets ****************************************************************** */
 
-bool button(ui_ctx *ctx, ui_id id, const char *label, int x, int y) {
+bool button(ui_ctx *ctx, const char *label, int x, int y) {
+    ui_id id = ui_get_id(ctx, label, strlen(label));
     new_widget(ctx, id);
     if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = id;
