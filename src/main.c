@@ -11,7 +11,7 @@
 int main(void) {
     InitWindow(TFT_WIDTH, TFT_HEIGHT, "ui");
     SetTargetFPS(60);
-    ui_ctx ctx = new_uicontext();
+    ui_ctx ctx = ui_context_new();
     while (!WindowShouldClose()) {
         ui_begin(&ctx);
         handle_keys(&ctx);

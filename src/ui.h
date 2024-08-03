@@ -15,7 +15,7 @@ typedef struct UIVec2 {
     int x, y;
 } ui_vec2;
 
-ui_ctx new_uicontext();
+ui_ctx ui_context_new();
 void ui_begin(ui_ctx *ctx);
 void ui_end(ui_ctx *ctx);
 
@@ -140,7 +140,7 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
         ctx->hot_item = best_id;
 }
 
-ui_ctx new_uicontext() {
+ui_ctx ui_context_new() {
     ui_ctx ctx;
     ctx.pressed_keys = UI_KEY_NONE;
     ctx.hot_item = ctx.active_item = -1;
