@@ -30,6 +30,7 @@ void ui_end(ui_ctx *ctx);
         if(!(x))                                                                \
             ui_error("%s:%d: assertion '%s' failed", __FILE__, __LINE__, #x);   \
     } while(0)
+/* stack stuff, inspired by microui */
 #define ui_stack(T, capacity) struct { int idx; T items[capacity]; }
 #define ui_push(s, val)                             \
     do {                                            \
