@@ -16,12 +16,14 @@ int main(void) {
         ui_begin(&ctx);
         handle_keys(&ctx);
         ClearBackground(BLACK);
-        if(button(&ctx, "Button 1", 10, 10))
-            printf("Button 1 clicked!\n");
-        if(button(&ctx, "Button 2", 100, 10))
-            printf("Button 2 clicked!\n");
-        if(button(&ctx, "Button 3", 100, 40))
-            printf("Button 3 clicked!\n");
+        char label[32];
+        for(int y = 0; y < 4; y++) {
+            for(int x = 0; x < 4; x++) {
+                snprintf(label, sizeof(label), "Button %d", y * 4 + x);
+                if(button(&ctx, label, 10 + x * 80, 10 + y * 25))
+                    printf("%s clicked!\n", label);
+            }
+        }
         EndDrawing();
         ui_end(&ctx);
     }
