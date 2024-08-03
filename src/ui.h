@@ -15,6 +15,8 @@ typedef struct UIVec2 {
     int x, y;
 } ui_vec2;
 
+typedef unsigned int ui_id;
+
 ui_ctx ui_context_new();
 void ui_begin(ui_ctx *ctx);
 void ui_end(ui_ctx *ctx);
@@ -74,7 +76,7 @@ void ui_set_key(ui_ctx *ctx, enum UI_KEY pressed_key);
 /* ************************************************************************** */
 
 /* Widgets ****************************************************************** */
-bool button(ui_ctx *ctx, int id, const char *label, int x, int y);
+bool button(ui_ctx *ctx, ui_id id, const char *label, int x, int y);
 /* ************************************************************************** */
 
 
@@ -82,22 +84,22 @@ bool button(ui_ctx *ctx, int id, const char *label, int x, int y);
 
 typedef struct WidgetLocation {
     ui_vec2 vec;
-    int id;
+    ui_id id;
 } widget_location;
 
 struct UIContext {
     uint8_t pressed_keys;
-    int hot_item, active_item;
+    ui_id hot_item, active_item;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
-    ui_stack(unsigned int, UI_WIDGETS_MAX) id_stack;
+    ui_stack(ui_id, UI_WIDGETS_MAX) id_stack;
 };
 
-void new_widget(ui_ctx *ctx, int id) {
-    if(ctx->hot_item == -1)
+void new_widget(ui_ctx *ctx, ui_id id) {
+    if(ctx->hot_item == 0)
         ctx->hot_item = id;
 }
 
-static widget_location *ui_get_widget_location(ui_ctx *ctx, int id) {
+static widget_location *ui_get_widget_location(ui_ctx *ctx, ui_id id) {
     for(int i = 0; i < ctx->widgets_locations.idx; i++) {
         widget_location *loc = &ctx->widgets_locations.items[i];
         if(loc->id == id)
@@ -124,9 +126,9 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
     if(!wl) return;
     ui_vec2 hot_item_loc = wl->vec;
     int best_distance = INT_MAX;
-    int best_id = -1;
+    ui_id best_id = 0;
     for(int i = 0; i < ctx->widgets_locations.idx; i++) {
-        int id = ctx->widgets_locations.items[i].id;
+        ui_id id = ctx->widgets_locations.items[i].id;
         if(id == ctx->hot_item)
             continue;
         ui_vec2 loc = ctx->widgets_locations.items[i].vec;
@@ -137,14 +139,14 @@ static void ui_update_hot_item_by_direction(ui_ctx *ctx, ui_vec2 dir) {
             best_id = id;
         }
     }
-    if(best_id != -1)
+    if(best_id != 0)
         ctx->hot_item = best_id;
 }
 
 ui_ctx ui_context_new() {
     ui_ctx ctx;
     ctx.pressed_keys = UI_KEY_NONE;
-    ctx.hot_item = ctx.active_item = -1;
+    ctx.hot_item = ctx.active_item = 0;
     return ctx;
 }
 
@@ -160,7 +162,7 @@ void ui_begin(ui_ctx *ctx) {
 
 void ui_end(ui_ctx *ctx) {
     if(!(ctx->pressed_keys & UI_KEY_ENTER))
-        ctx->active_item = -1;
+        ctx->active_item = 0;
     ui_vec2 dir = {0, 0};
     if(ctx->pressed_keys & UI_KEY_UP)
         dir.y--;
@@ -176,7 +178,7 @@ void ui_end(ui_ctx *ctx) {
 
 /* Widgets ****************************************************************** */
 
-bool button(ui_ctx *ctx, int id, const char *label, int x, int y) {
+bool button(ui_ctx *ctx, ui_id id, const char *label, int x, int y) {
     new_widget(ctx, id);
     if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = id;
