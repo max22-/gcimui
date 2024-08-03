@@ -57,6 +57,7 @@ extern void ui_draw_rectangle(int x, int y, int w, int h, ui_color color);
 extern void ui_fill_rectangle(int x, int y, int w, int h, ui_color color);
 extern void ui_draw_text(const char *msg, int x, int y, int font_size, ui_color color);
 extern int ui_get_text_width(const char *text, int font_size);
+extern unsigned long ui_millis();
 extern void ui_error(const char *fmt, ...);
 enum UI_KEY {
     UI_KEY_NONE = 0,

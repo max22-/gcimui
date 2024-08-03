@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include "ui.h"
 
 void ui_draw_rectangle(int x, int y, int w, int h, ui_color color) {
@@ -18,6 +19,10 @@ void ui_draw_text(const char *msg, int x, int y, int font_size, ui_color color) 
 
 int ui_get_text_width(const char *text, int font_size) {
     return MeasureText(text, font_size);
+}
+
+unsigned long ui_millis() {
+    return clock() / (CLOCKS_PER_SEC / 1000);
 }
 
 void ui_error(const char *fmt, ...) {
