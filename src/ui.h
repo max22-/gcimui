@@ -53,10 +53,10 @@ void ui_pop_id(ui_ctx *ctx);
 /* ************************************************************************** */
 
 /* Backend ****************************************************************** */
-extern void draw_rectangle(int x, int y, int w, int h, ui_color color);
-extern void fill_rectangle(int x, int y, int w, int h, ui_color color);
-extern void draw_text(const char *msg, int x, int y, int font_size, ui_color color);
-extern int get_text_width(const char *text, int font_size);
+extern void ui_draw_rectangle(int x, int y, int w, int h, ui_color color);
+extern void ui_fill_rectangle(int x, int y, int w, int h, ui_color color);
+extern void ui_draw_text(const char *msg, int x, int y, int font_size, ui_color color);
+extern int ui_get_text_width(const char *text, int font_size);
 extern void ui_error(const char *fmt, ...);
 enum UI_KEY {
     UI_KEY_NONE = 0,
@@ -214,14 +214,14 @@ bool button(ui_ctx *ctx, const char *label, int x, int y) {
     new_widget(ctx, id);
     if(ctx->hot_item == id && (ctx->pressed_keys & UI_KEY_ENTER))
         ctx->active_item = id;
-    int w = get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
+    int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
     int h = UI_FONT_SIZE + 2 * UI_MARGIN;
-    fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
+    ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
-        draw_rectangle(x, y, w, h, UI_COLOR_RED);
+        ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
     else if(ctx->hot_item == id)
-        draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
-    draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
+        ui_draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
+    ui_draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
     ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
     return !(ctx->pressed_keys & UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
 }

@@ -4,19 +4,19 @@
 #include <stdarg.h>
 #include "ui.h"
 
-void draw_rectangle(int x, int y, int w, int h, ui_color color) {
+void ui_draw_rectangle(int x, int y, int w, int h, ui_color color) {
     DrawRectangleLines(x, y, w, h, (Color){.r = color.r, .g = color.g, .b = color.b, .a = color.a});
 }
 
-void fill_rectangle(int x, int y, int w, int h, ui_color color) {
+void ui_fill_rectangle(int x, int y, int w, int h, ui_color color) {
     DrawRectangle(x, y, w, h, (Color){.r = color.r, .g = color.g, .b = color.b, .a = color.a});
 }
 
-void draw_text(const char *msg, int x, int y, int font_size, ui_color color) {
+void ui_draw_text(const char *msg, int x, int y, int font_size, ui_color color) {
     DrawText(msg, x, y, font_size, (Color){.r = color.r, .g = color.g, .b = color.b, .a = color.a});
 }
 
-int get_text_width(const char *text, int font_size) {
+int ui_get_text_width(const char *text, int font_size) {
     return MeasureText(text, font_size);
 }
 
