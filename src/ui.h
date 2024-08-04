@@ -169,6 +169,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state) {
 
 void ui_begin(ui_ctx *ctx) {
     ui_clear_stack(ctx->widgets_locations);
+    ui_clear_stack(ctx->id_stack);
     { /* Input handling ************** */
         ctx->input.events = ~ctx->input.state & ctx->input.new_state; // detect rising edge
         if(ctx->input.events != 0)
