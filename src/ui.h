@@ -27,6 +27,8 @@ void ui_pop_id(ui_ctx *ctx);
 /* Macros ******************************************************************* */
 #define UI_WIDGETS_MAX 1000
 #define UI_ID_STACK_SIZE 32
+#define UI_CONTAINER_STACK_SIZE 32
+#define UI_CONTAINER_POOL_SIZE 32
 #define UI_MARGIN 2
 #define UI_FONT_SIZE 16
 #define UI_KEY_REPEAT_DELAY 500 // ms
@@ -37,6 +39,7 @@ void ui_pop_id(ui_ctx *ctx);
         if(!(x))                                                                \
             ui_error("%s:%d: assertion '%s' failed", __FILE__, __LINE__, #x);   \
     } while(0)
+#define ui_max(a, b) ((a) > (b) ? (a) : (b))
 /* stack stuff, inspired by microui */
 #define ui_stack(T, capacity) struct { int idx; T items[capacity]; }
 #define ui_push(s, val)                             \
@@ -50,7 +53,32 @@ void ui_pop_id(ui_ctx *ctx);
         ui_assert((s).idx > 0); \
         (s).idx--;              \
     } while(0)
+#define ui_stack_get_last(s) ((s).items[(s).idx - 1])
 #define ui_clear_stack(s) do { (s).idx = 0; } while(0)
+
+/* pools, inspired by microui */
+#define ui_pool(T, capacity) struct { struct { ui_id id; int last_update; ui_##T get; } items[capacity]; }
+#define ui_pool_items(name) ctx->name.items
+#define ui_generate_pool_get_func(T, name)                                          \
+    ui_##T* ui_ ## T ## _pool_get(ui_ctx *ctx, ui_id id) {                          \
+        /* Try to find the id in the pool */                                        \
+        for(int i = 0; i < ARRAY_SIZE(ui_pool_items(name)); i++) {                  \
+            if(ui_pool_items(name)[i].id == id)                                     \
+                return &ui_pool_items(name)[i].get;                                 \
+        }                                                                           \
+        int n = -1, f = ctx->frame;                                                 \
+        for(int i = 0; i < ARRAY_SIZE(ui_pool_items(name)); i++) {                  \
+            if(ui_pool_items(name)[i].last_update < f) {                            \
+                f = ui_pool_items(name)[i].last_update;                             \
+                n = i;                                                              \
+            }                                                                       \
+        }                                                                           \
+        ui_assert(n > -1);                                                          \
+        ui_pool_items(name)[n].id = id;                                             \
+        ui_pool_items(name)[n].last_update = ctx->frame;                            \
+        memset(&ui_pool_items(name)[n].get, 0, sizeof(ui_pool_items(name)[n].get)); \
+        return &ui_pool_items(name)[n].get;                                         \
+    }
 
 /* ************************************************************************** */
 
@@ -83,7 +111,10 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state);
 /* ************************************************************************** */
 
 /* Widgets ****************************************************************** */
-bool button(ui_ctx *ctx, const char *label, int x, int y);
+bool button(ui_ctx *ctx, const char *label);
+void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height);
+void ui_end_container(ui_ctx *ctx);
+void ui_nextline(ui_ctx *ctx);
 /* ************************************************************************** */
 
 
@@ -100,15 +131,38 @@ typedef struct WidgetLocation {
     ui_id id;
 } widget_location;
 
+typedef struct Container {
+    int width, height;
+    ui_vec2 origin;
+    ui_vec2 cursor;
+    int max_h; // max height of current row in the container
+    ui_vec2 scroll;
+} ui_container;
+
+typedef struct Style {
+    int spacing;
+} ui_style;
+
 // Warning : make sure that the context is valid when zero-initialized !!!
 struct UIContext {
     struct Input input;
     ui_id hot_item, active_item;
+    int frame;
+    ui_style style;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
     ui_stack(ui_id, UI_ID_STACK_SIZE) id_stack;
+    ui_stack(ui_id, UI_CONTAINER_STACK_SIZE) container_stack;
+    ui_pool(container, UI_CONTAINER_POOL_SIZE) container_pool;
+    ui_container *current_container;
 };
 
-void new_widget(ui_ctx *ctx, ui_id id) {
+ui_generate_pool_get_func(container, container_pool)
+
+static ui_style ui_default_style = {
+    .spacing = 4
+};
+
+static void new_selectable_widget(ui_ctx *ctx, ui_id id) {
     if(ctx->hot_item == 0)
         ctx->hot_item = id;
 }
@@ -170,6 +224,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state) {
 void ui_begin(ui_ctx *ctx) {
     ui_clear_stack(ctx->widgets_locations);
     ui_clear_stack(ctx->id_stack);
+    ctx->style = ui_default_style;
     { /* Input handling ************** */
         ctx->input.events = ~ctx->input.state & ctx->input.new_state; // detect rising edge
         if(ctx->input.events != 0)
@@ -189,7 +244,7 @@ void ui_begin(ui_ctx *ctx) {
             }
         }
     } /* End of input handling ******* */
-
+    ctx->frame++;
 }
 
 void ui_end(ui_ctx *ctx) {
@@ -207,6 +262,7 @@ void ui_end(ui_ctx *ctx) {
     if(dir.x != 0 || dir.y != 0)
         ui_update_hot_item_by_direction(ctx, dir);
     ctx->input.state = ctx->input.new_state;
+    ui_assert(ctx->container_stack.idx == 0);
 }
 
 /* id stuff, inspired by microui ******************************************** */
@@ -236,15 +292,46 @@ void ui_pop_id(ui_ctx *ctx) {
     ui_pop(ctx->id_stack);
 }
 
+void ui_push_container(ui_ctx *ctx, ui_id id) {
+    ui_container *parent = ctx->current_container;
+    ui_push(ctx->container_stack, id);
+    ui_container *new_container = ui_container_pool_get(ctx, id);
+    if(parent == NULL)
+        new_container->origin = (ui_vec2){.x = 0, .y = 0};
+    else
+        new_container->origin = parent->cursor;
+    new_container->cursor = (ui_vec2){.x = 0, .y = 0};
+    new_container->max_h = 0;
+    ctx->current_container = new_container;
+}
+
+void ui_pop_container(ui_ctx *ctx) {
+    ui_pop(ctx->container_stack);
+    if(ctx->container_stack.idx == 0)
+        ctx->current_container = NULL;
+    else
+        ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
+}
+
+void ui_update_cursor(ui_ctx *ctx, int w, int h) {
+    ui_assert(ctx->current_container != NULL);
+    ctx->current_container->cursor.x += w + ctx->style.spacing;
+    ctx->current_container->max_h = ui_max(ctx->current_container->max_h, h);
+}
+
 /* Widgets ****************************************************************** */
 
-bool button(ui_ctx *ctx, const char *label, int x, int y) {
+bool button(ui_ctx *ctx, const char *label) {
     ui_id id = ui_get_id(ctx, label, strlen(label));
-    new_widget(ctx, id);
+    new_selectable_widget(ctx, id);
     if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
         ctx->active_item = id;
     int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
     int h = UI_FONT_SIZE + 2 * UI_MARGIN;
+    ui_container *container = ctx->current_container;
+    ui_assert(container  != NULL);
+    int x = container->cursor.x;
+    int y = container->cursor.y;
     ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
@@ -252,7 +339,28 @@ bool button(ui_ctx *ctx, const char *label, int x, int y) {
         ui_draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
     ui_draw_text(label, x + UI_MARGIN, y + UI_MARGIN, UI_FONT_SIZE, UI_COLOR_BLACK);
     ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
+    ui_update_cursor(ctx, w, h);
     return !ui_key_event(ctx, UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
+}
+
+void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height) {
+    ui_id id = ui_get_id(ctx, name, strlen(name));
+    ui_push_container(ctx, id);
+    ui_container *container = ctx->current_container;
+    container->width = width;
+    container->height = height;
+}
+
+void ui_end_container(ui_ctx *ctx) {
+    ui_pop_container(ctx);
+}
+
+void ui_nextline(ui_ctx *ctx) {
+    ui_container *container = ctx->current_container;
+    ui_assert(container != NULL);
+    container->cursor.y += container->max_h + ctx->style.spacing;
+    container->cursor.x = 0;
+    container->max_h = 0;
 }
 
 #endif

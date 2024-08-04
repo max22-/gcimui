@@ -16,14 +16,17 @@ int main(void) {
         handle_keys(&ctx);
         ui_begin(&ctx);
         ClearBackground(BLACK);
+        ui_begin_container(&ctx, "root", TFT_WIDTH, TFT_HEIGHT);
         char label[32];
         for(int y = 0; y < 4; y++) {
             for(int x = 0; x < 4; x++) {
                 snprintf(label, sizeof(label), "Button %d", y * 4 + x);
-                if(button(&ctx, label, 10 + x * 80, 10 + y * 25))
+                if(button(&ctx, label))
                     printf("%s clicked!\n", label);
             }
+            ui_nextline(&ctx);
         }
+        ui_end_container(&ctx);
         EndDrawing();
         ui_end(&ctx);
     }
