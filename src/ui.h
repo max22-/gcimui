@@ -50,6 +50,7 @@ void ui_pop_id(ui_ctx *ctx);
         ui_assert((s).idx > 0); \
         (s).idx--;              \
     } while(0)
+#define ui_clear_stack(s) do { (s).idx = 0; } while(0)
 
 /* ************************************************************************** */
 
@@ -167,7 +168,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state) {
 }
 
 void ui_begin(ui_ctx *ctx) {
-    ctx->widgets_locations.idx = 0;
+    ui_clear_stack(ctx->widgets_locations);
     { /* Input handling ************** */
         ctx->input.events = ~ctx->input.state & ctx->input.new_state; // detect rising edge
         if(ctx->input.events != 0)
