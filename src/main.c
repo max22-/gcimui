@@ -21,7 +21,7 @@ int main(void) {
         for(int y = 0; y < 4; y++) {
             for(int x = 0; x < 4; x++) {
                 snprintf(label, sizeof(label), "Button %d", y * 4 + x);
-                if(button(&ctx, label))
+                if(ui_button(&ctx, label))
                     printf("%s clicked!\n", label);
             }
             ui_nextline(&ctx);

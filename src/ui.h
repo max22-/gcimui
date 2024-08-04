@@ -111,7 +111,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state);
 /* ************************************************************************** */
 
 /* Widgets ****************************************************************** */
-bool button(ui_ctx *ctx, const char *label);
+bool ui_button(ui_ctx *ctx, const char *label);
 void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height);
 void ui_end_container(ui_ctx *ctx);
 void ui_nextline(ui_ctx *ctx);
@@ -321,7 +321,7 @@ void ui_update_cursor(ui_ctx *ctx, int w, int h) {
 
 /* Widgets ****************************************************************** */
 
-bool button(ui_ctx *ctx, const char *label) {
+bool ui_button(ui_ctx *ctx, const char *label) {
     ui_id id = ui_get_id(ctx, label, strlen(label));
     new_selectable_widget(ctx, id);
     if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
