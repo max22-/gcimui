@@ -338,8 +338,7 @@ void ui_update_cursor(ui_ctx *ctx, int w, int h) {
         container->cursor.x += w + ctx->style.spacing;
         container->max_x = ui_max(container->max_x, container->cursor.x);
         container->max_y = ui_max(container->max_y, container->cursor.y + h);
-    }
-    
+    }  
 }
 
 void ui_push_container(ui_ctx *ctx, ui_id id) {
