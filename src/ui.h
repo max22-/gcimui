@@ -326,12 +326,12 @@ bool ui_button(ui_ctx *ctx, const char *label) {
     new_selectable_widget(ctx, id);
     if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
         ctx->active_item = id;
-    int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
-    int h = UI_FONT_SIZE + 2 * UI_MARGIN;
+    const int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
+    const int h = UI_FONT_SIZE + 2 * UI_MARGIN;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    int x = container->cursor.x;
-    int y = container->cursor.y;
+    const int x = container->cursor.x;
+    const int y = container->cursor.y;
     ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
