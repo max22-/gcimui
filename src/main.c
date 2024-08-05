@@ -19,13 +19,16 @@ int main(void) {
         ui_begin_container(&ctx, "root", TFT_WIDTH, TFT_HEIGHT);
         char label[32];
         for(int y = 0; y < 4; y++) {
+            ui_begin_container(&ctx, "column", 80, 240);
             for(int x = 0; x < 4; x++) {
                 snprintf(label, sizeof(label), "Button %d", y * 4 + x);
                 if(ui_button(&ctx, label))
                     printf("%s clicked!\n", label);
+                ui_nextline(&ctx);
             }
-            ui_nextline(&ctx);
+            ui_end_container(&ctx);
         }
+        ui_nextline(&ctx);
         static bool checked = false;
         ui_checkbox(&ctx, "checkbox", &checked);
         if(checked) {

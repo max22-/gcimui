@@ -40,6 +40,7 @@ void ui_pop_id(ui_ctx *ctx);
             ui_error("%s:%d: assertion '%s' failed", __FILE__, __LINE__, #x);   \
     } while(0)
 #define ui_max(a, b) ((a) > (b) ? (a) : (b))
+#define ui_min(a, b) ((a) < (b) ? (a) : (b))
 /* stack stuff, inspired by microui */
 #define ui_stack(T, capacity) struct { int idx; T items[capacity]; }
 #define ui_push(s, val)                             \
@@ -136,7 +137,7 @@ typedef struct Container {
     int width, height;
     ui_vec2 origin;
     ui_vec2 cursor;
-    int max_h; // max height of current row in the container
+    int max_x, max_y; // bounding box of the container's content (max_y is used to begin a new row)
     ui_vec2 scroll;
 } ui_container;
 
@@ -302,22 +303,34 @@ void ui_push_container(ui_ctx *ctx, ui_id id) {
     else
         new_container->origin = parent->cursor;
     new_container->cursor = (ui_vec2){.x = 0, .y = 0};
-    new_container->max_h = 0;
+    new_container->max_x = 0;
+    new_container->max_y = 0;
     ctx->current_container = new_container;
 }
 
 void ui_pop_container(ui_ctx *ctx) {
+    ui_container *container = ctx->current_container;
+    ui_assert(container != NULL);
+    int dx = ui_min(container->width, container->max_x);
+    int dy = ui_min(container->height, container->max_y);
     ui_pop(ctx->container_stack);
     if(ctx->container_stack.idx == 0)
         ctx->current_container = NULL;
     else
         ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
+    printf("updating cursor from container: dx = %d, dy = %d\n", dx, dy);
+    ui_update_cursor(ctx, dx, dy);
 }
 
 void ui_update_cursor(ui_ctx *ctx, int w, int h) {
-    ui_assert(ctx->current_container != NULL);
-    ctx->current_container->cursor.x += w + ctx->style.spacing;
-    ctx->current_container->max_h = ui_max(ctx->current_container->max_h, h);
+    ui_container *container = ctx->current_container;
+    if(container != NULL) {
+        container->cursor.x += w + ctx->style.spacing;
+        container->max_x = ui_max(container->max_x, container->cursor.x);
+        container->max_y = ui_max(container->max_y, container->cursor.y + h);
+        printf("container->cursor.x = %d, .y = %d\n", container->cursor.x, container->cursor.y);
+    }
+    
 }
 
 /* Widgets ****************************************************************** */
@@ -331,8 +344,8 @@ bool ui_button(ui_ctx *ctx, const char *label) {
     const int h = UI_FONT_SIZE + 2 * UI_MARGIN;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->cursor.x;
-    const int y = container->cursor.y;
+    const int x = container->origin.x + container->cursor.x;
+    const int y = container->origin.y + container->cursor.y;
     ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
@@ -351,8 +364,8 @@ bool ui_checkbox(ui_ctx *ctx, const char *label, bool *checked) {
         ctx->active_item = id;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->cursor.x;
-    const int y = container->cursor.y;
+    const int x = container->origin.x + container->cursor.x;
+    const int y = container->origin.y + container->cursor.y;
     const int w = 20, h = 20;
     if(*checked)
         ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
@@ -385,9 +398,8 @@ void ui_end_container(ui_ctx *ctx) {
 void ui_nextline(ui_ctx *ctx) {
     ui_container *container = ctx->current_container;
     ui_assert(container != NULL);
-    container->cursor.y += container->max_h + ctx->style.spacing;
+    container->cursor.y = container->max_y + ctx->style.spacing;
     container->cursor.x = 0;
-    container->max_h = 0;
 }
 
 #endif
