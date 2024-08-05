@@ -332,6 +332,16 @@ void ui_pop_clip_rect(ui_ctx *ctx) {
         ui_clip_end();
 }
 
+void ui_update_cursor(ui_ctx *ctx, int w, int h) {
+    ui_container *container = ctx->current_container;
+    if(container != NULL) {
+        container->cursor.x += w + ctx->style.spacing;
+        container->max_x = ui_max(container->max_x, container->cursor.x);
+        container->max_y = ui_max(container->max_y, container->cursor.y + h);
+    }
+    
+}
+
 void ui_push_container(ui_ctx *ctx, ui_id id) {
     ui_container *parent = ctx->current_container;
     ui_push(ctx->container_stack, id);
@@ -366,16 +376,6 @@ void ui_pop_container(ui_ctx *ctx) {
     else
         ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
     ui_update_cursor(ctx, dx, dy);
-}
-
-void ui_update_cursor(ui_ctx *ctx, int w, int h) {
-    ui_container *container = ctx->current_container;
-    if(container != NULL) {
-        container->cursor.x += w + ctx->style.spacing;
-        container->max_x = ui_max(container->max_x, container->cursor.x);
-        container->max_y = ui_max(container->max_y, container->cursor.y + h);
-    }
-    
 }
 
 /* Widgets ****************************************************************** */
