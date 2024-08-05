@@ -21,7 +21,15 @@ int ui_get_text_width(const char *text, int font_size) {
     return MeasureText(text, font_size);
 }
 
-unsigned long ui_millis() {
+void ui_clip(ui_vec4 rect) {
+    BeginScissorMode(rect.x, rect.y, rect.w, rect.h);
+}
+
+void ui_clip_end(void) {
+    EndScissorMode();
+}
+
+unsigned long ui_millis(void) {
     return GetTime() * 1000;
 }
 

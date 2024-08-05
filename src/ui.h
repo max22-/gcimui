@@ -16,6 +16,10 @@ typedef struct UIVec2 {
     int x, y;
 } ui_vec2;
 
+typedef struct UIVec4 {
+    int x, y, w, h;
+} ui_vec4;
+
 typedef unsigned int ui_id;
 
 void ui_begin(ui_ctx *ctx);
@@ -27,6 +31,7 @@ void ui_pop_id(ui_ctx *ctx);
 /* Macros ******************************************************************* */
 #define UI_WIDGETS_MAX 1000
 #define UI_ID_STACK_SIZE 32
+#define UI_CLIP_STACK_SIZE 32
 #define UI_CONTAINER_STACK_SIZE 32
 #define UI_CONTAINER_POOL_SIZE 32
 #define UI_MARGIN 2
@@ -56,7 +61,7 @@ void ui_pop_id(ui_ctx *ctx);
     } while(0)
 #define ui_stack_get_last(s) ((s).items[(s).idx - 1])
 #define ui_clear_stack(s) do { (s).idx = 0; } while(0)
-
+#define ui_stack_empty(s) ((s).idx == 0)
 /* pools, inspired by microui */
 #define ui_pool(T, capacity) struct { struct { ui_id id; int last_update; ui_##T get; } items[capacity]; }
 #define ui_pool_items(name) ctx->name.items
@@ -88,7 +93,9 @@ extern void ui_draw_rectangle(int x, int y, int w, int h, ui_color color);
 extern void ui_fill_rectangle(int x, int y, int w, int h, ui_color color);
 extern void ui_draw_text(const char *msg, int x, int y, int font_size, ui_color color);
 extern int ui_get_text_width(const char *text, int font_size);
-extern unsigned long ui_millis();
+extern void ui_clip(ui_vec4 rect);
+extern void ui_clip_end(void);
+extern unsigned long ui_millis(void);
 extern void ui_error(const char *fmt, ...);
 enum UI_KEY {
     UI_KEY_NONE,
@@ -153,6 +160,7 @@ struct UIContext {
     ui_style style;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
     ui_stack(ui_id, UI_ID_STACK_SIZE) id_stack;
+    ui_stack(ui_vec4, UI_CLIP_STACK_SIZE) clip_stack;
     ui_stack(ui_id, UI_CONTAINER_STACK_SIZE) container_stack;
     ui_pool(container, UI_CONTAINER_POOL_SIZE) container_pool;
     ui_container *current_container;
@@ -264,7 +272,8 @@ void ui_end(ui_ctx *ctx) {
     if(dir.x != 0 || dir.y != 0)
         ui_update_hot_item_by_direction(ctx, dir);
     ctx->input.state = ctx->input.new_state;
-    ui_assert(ctx->container_stack.idx == 0);
+    ui_assert(ui_stack_empty(ctx->clip_stack));
+    ui_assert(ui_stack_empty(ctx->container_stack));
 }
 
 /* id stuff, inspired by microui ******************************************** */
@@ -280,8 +289,7 @@ static ui_id hash(ui_id id, const void *data, size_t size) {
 }
 
 ui_id ui_get_id(ui_ctx *ctx, const void *data, size_t size) {
-    int idx = ctx->id_stack.idx;
-    ui_id res = (idx > 0) ? ctx->id_stack.items[idx - 1] : FNV_OFFSET_BASIS;
+    ui_id res = ui_stack_empty(ctx->id_stack) ? FNV_OFFSET_BASIS : ui_stack_get_last(ctx->id_stack);
     res = hash(res, data, size);
     return res;
 }
@@ -292,6 +300,36 @@ void ui_push_id(ui_ctx *ctx, const void *data, size_t size) {
 
 void ui_pop_id(ui_ctx *ctx) {
     ui_pop(ctx->id_stack);
+}
+
+void ui_push_clip_rect(ui_ctx *ctx, ui_vec4 rect) {
+    int x1, y1, x2, y2;
+    if(ui_stack_empty(ctx->clip_stack)) {
+        x1 = rect.x;
+        y1 = rect.y;
+        x2 = rect.x + rect.w;
+        y2 = rect.y + rect.h;
+    } else {
+        ui_vec4 tos = ui_stack_get_last(ctx->clip_stack);
+        x1 = ui_max(tos.x, rect.x);
+        y1 = ui_max(tos.y, rect.y);
+        x2 = ui_min(tos.x + tos.w, rect.x + rect.w);
+        y2 = ui_min(tos.y + tos.h, rect.x + rect.h);
+    }
+    ui_vec4 new_rect = (ui_vec4){.x = x1, .y = y1, .w = x2 - x1, .h = y2 - y1};
+    ui_push(ctx->clip_stack, new_rect);
+    ui_clip(new_rect);
+}
+
+void ui_pop_clip_rect(ui_ctx *ctx) {
+    
+    if(!ui_stack_empty(ctx->clip_stack)) {
+        ui_pop(ctx->clip_stack);
+        if(!ui_stack_empty(ctx->clip_stack))
+            ui_clip(ui_stack_get_last(ctx->clip_stack));
+    }
+    if(ui_stack_empty(ctx->clip_stack))
+        ui_clip_end();
 }
 
 void ui_push_container(ui_ctx *ctx, ui_id id) {
@@ -305,6 +343,14 @@ void ui_push_container(ui_ctx *ctx, ui_id id) {
     new_container->cursor = (ui_vec2){.x = 0, .y = 0};
     new_container->max_x = 0;
     new_container->max_y = 0;
+
+    ui_vec4 clip_rect;
+    clip_rect.x = new_container->origin.x;
+    clip_rect.y = new_container->origin.y;
+    clip_rect.w = new_container->width;
+    clip_rect.h = new_container->height;
+    ui_push_clip_rect(ctx, clip_rect);
+
     ctx->current_container = new_container;
 }
 
@@ -314,7 +360,8 @@ void ui_pop_container(ui_ctx *ctx) {
     int dx = ui_min(container->width, container->max_x);
     int dy = ui_min(container->height, container->max_y);
     ui_pop(ctx->container_stack);
-    if(ctx->container_stack.idx == 0)
+    ui_pop_clip_rect(ctx);
+    if(ui_stack_empty(ctx->container_stack))
         ctx->current_container = NULL;
     else
         ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
@@ -391,6 +438,7 @@ void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height) {
 
 void ui_end_container(ui_ctx *ctx) {
     ui_pop_container(ctx);
+    ui_pop_clip_rect(ctx);
 }
 
 void ui_nextline(ui_ctx *ctx) {
