@@ -342,8 +342,8 @@ bool ui_button(ui_ctx *ctx, const char *label) {
     const int h = UI_FONT_SIZE + 2 * UI_MARGIN;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->origin.x + container->cursor.x;
-    const int y = container->origin.y + container->cursor.y;
+    const int x = container->origin.x + container->scroll.x + container->cursor.x;
+    const int y = container->origin.y + +container->scroll.y + container->cursor.y;
     ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
@@ -362,8 +362,8 @@ bool ui_checkbox(ui_ctx *ctx, const char *label, bool *checked) {
         ctx->active_item = id;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->origin.x + container->cursor.x;
-    const int y = container->origin.y + container->cursor.y;
+    const int x = container->origin.x + container->scroll.x + container->cursor.x;
+    const int y = container->origin.y + +container->scroll.y + container->cursor.y;
     const int w = 20, h = 20;
     if(*checked)
         ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
