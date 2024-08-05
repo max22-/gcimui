@@ -26,6 +26,12 @@ int main(void) {
             }
             ui_nextline(&ctx);
         }
+        static bool checked = false;
+        ui_checkbox(&ctx, "checkbox", &checked);
+        if(checked) {
+            if(ui_button(&ctx, "hidden button"))
+                printf("hidden button clicked!\n");
+        }
         ui_end_container(&ctx);
         EndDrawing();
         ui_end(&ctx);

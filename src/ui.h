@@ -103,6 +103,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state);
 
 /* Colors ******************************************************************* */
 #define UI_COLOR_BLACK (ui_color){.r = 0, .g = 0, .b = 0, .a = 255}
+#define UI_COLOR_WHITE (ui_color){.r = 255, .g = 255, .b = 255, .a = 255}
 #define UI_COLOR_RED (ui_color){.r = 255, .g = 0, .b = 0, .a = 255}
 #define UI_COLOR_GREEN (ui_color){.r = 0, .g = 255, .b = 0, .a = 255}
 #define UI_COLOR_BLUE (ui_color){.r = 0, .g = 0, .b = 255, .a = 255}
@@ -341,6 +342,32 @@ bool ui_button(ui_ctx *ctx, const char *label) {
     ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
     ui_update_cursor(ctx, w, h);
     return !ui_key_event(ctx, UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
+}
+
+bool ui_checkbox(ui_ctx *ctx, const char *label, bool *checked) {
+    ui_id id = ui_get_id(ctx, label, strlen(label));
+    new_selectable_widget(ctx, id);
+    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
+        ctx->active_item = id;
+    ui_container *container = ctx->current_container;
+    ui_assert(container  != NULL);
+    const int x = container->cursor.x;
+    const int y = container->cursor.y;
+    const int w = 20, h = 20;
+    if(*checked)
+        ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
+    if(ctx->active_item == id)
+        ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
+    else if(ctx->hot_item == id)
+        ui_draw_rectangle(x, y, w, h, UI_COLOR_GREEN);
+    else
+        ui_draw_rectangle(x, y, w, h, UI_COLOR_WHITE);
+    ui_push(ctx->widgets_locations, ((widget_location){.id = id, .vec = (ui_vec2){.x = x, .y = y}}));
+    ui_update_cursor(ctx, w, h);
+    bool clicked = !ui_key_event(ctx, UI_KEY_ENTER) && ctx->hot_item == id && ctx->active_item == id;
+    if(clicked)
+        *checked = !*checked;
+    return clicked;
 }
 
 void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height) {
