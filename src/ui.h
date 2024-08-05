@@ -318,7 +318,6 @@ void ui_pop_container(ui_ctx *ctx) {
         ctx->current_container = NULL;
     else
         ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
-    printf("updating cursor from container: dx = %d, dy = %d\n", dx, dy);
     ui_update_cursor(ctx, dx, dy);
 }
 
@@ -328,7 +327,6 @@ void ui_update_cursor(ui_ctx *ctx, int w, int h) {
         container->cursor.x += w + ctx->style.spacing;
         container->max_x = ui_max(container->max_x, container->cursor.x);
         container->max_y = ui_max(container->max_y, container->cursor.y + h);
-        printf("container->cursor.x = %d, .y = %d\n", container->cursor.x, container->cursor.y);
     }
     
 }
