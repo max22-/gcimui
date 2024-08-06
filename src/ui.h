@@ -22,6 +22,8 @@ typedef struct UIVec4 {
 
 typedef unsigned int ui_id;
 
+void ui_init(ui_ctx *ctx, int screen_width, int screen_height);
+
 void ui_begin(ui_ctx *ctx);
 void ui_end(ui_ctx *ctx);
 ui_id ui_get_id(ui_ctx *ctx, const void *data, size_t size);
@@ -31,7 +33,6 @@ void ui_pop_id(ui_ctx *ctx);
 /* Macros ******************************************************************* */
 #define UI_WIDGETS_MAX 1000
 #define UI_ID_STACK_SIZE 32
-#define UI_CLIP_STACK_SIZE 32
 #define UI_CONTAINER_STACK_SIZE 32
 #define UI_CONTAINER_POOL_SIZE 32
 #define UI_MARGIN 2
@@ -121,7 +122,7 @@ void ui_set_key_state(ui_ctx *ctx, enum UI_KEY key, bool state);
 
 /* Widgets ****************************************************************** */
 bool ui_button(ui_ctx *ctx, const char *label);
-void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height);
+void ui_begin_container(ui_ctx *ctx, const char *name);
 void ui_end_container(ui_ctx *ctx);
 void ui_nextline(ui_ctx *ctx);
 /* ************************************************************************** */
@@ -141,11 +142,9 @@ typedef struct WidgetLocation {
 } widget_location;
 
 typedef struct Container {
-    int width, height;
     ui_vec2 origin;
     ui_vec2 cursor;
     int max_x, max_y; // bounding box of the container's content (max_y is used to begin a new row)
-    ui_vec2 scroll;
 } ui_container;
 
 typedef struct Style {
@@ -160,11 +159,17 @@ struct UIContext {
     ui_style style;
     ui_stack(widget_location, UI_WIDGETS_MAX) widgets_locations;
     ui_stack(ui_id, UI_ID_STACK_SIZE) id_stack;
-    ui_stack(ui_vec4, UI_CLIP_STACK_SIZE) clip_stack;
     ui_stack(ui_id, UI_CONTAINER_STACK_SIZE) container_stack;
     ui_pool(container, UI_CONTAINER_POOL_SIZE) container_pool;
     ui_container *current_container;
+    ui_vec2 screen_size;
+    ui_vec2 scroll; /* global scrolling (i decided to not support per-container scrolling)*/
 };
+
+void ui_init(ui_ctx *ctx, int screen_width, int screen_height) {
+    ctx->screen_size.x = screen_width;
+    ctx->screen_size.y = screen_height;
+}
 
 ui_generate_pool_get_func(container, container_pool)
 
@@ -172,9 +177,17 @@ static ui_style ui_default_style = {
     .spacing = 4
 };
 
-static void new_selectable_widget(ui_ctx *ctx, ui_id id) {
+static void ui_new_selectable_widget(ui_ctx *ctx, ui_id id, ui_vec4 bounds) {
     if(ctx->hot_item == 0)
         ctx->hot_item = id;
+    if(ctx->hot_item == id) {
+        int dx = ctx->screen_size.x - (bounds.x + bounds.w);
+        int dy = ctx->screen_size.y - (bounds.y + bounds.h);
+        if(dx < 0) ctx->scroll.x += dx;
+        if(dy < 0) ctx->scroll.y += dy;
+        if(bounds.x < 0) ctx->scroll.x -= bounds.x;
+        if(bounds.y < 0) ctx->scroll.y -= bounds.y;
+    }
 }
 
 static widget_location *ui_get_widget_location(ui_ctx *ctx, ui_id id) {
@@ -272,7 +285,6 @@ void ui_end(ui_ctx *ctx) {
     if(dir.x != 0 || dir.y != 0)
         ui_update_hot_item_by_direction(ctx, dir);
     ctx->input.state = ctx->input.new_state;
-    ui_assert(ui_stack_empty(ctx->clip_stack));
     ui_assert(ui_stack_empty(ctx->container_stack));
 }
 
@@ -302,36 +314,6 @@ void ui_pop_id(ui_ctx *ctx) {
     ui_pop(ctx->id_stack);
 }
 
-void ui_push_clip_rect(ui_ctx *ctx, ui_vec4 rect) {
-    int x1, y1, x2, y2;
-    if(ui_stack_empty(ctx->clip_stack)) {
-        x1 = rect.x;
-        y1 = rect.y;
-        x2 = rect.x + rect.w;
-        y2 = rect.y + rect.h;
-    } else {
-        ui_vec4 tos = ui_stack_get_last(ctx->clip_stack);
-        x1 = ui_max(tos.x, rect.x);
-        y1 = ui_max(tos.y, rect.y);
-        x2 = ui_min(tos.x + tos.w, rect.x + rect.w);
-        y2 = ui_min(tos.y + tos.h, rect.x + rect.h);
-    }
-    ui_vec4 new_rect = (ui_vec4){.x = x1, .y = y1, .w = x2 - x1, .h = y2 - y1};
-    ui_push(ctx->clip_stack, new_rect);
-    ui_clip(new_rect);
-}
-
-void ui_pop_clip_rect(ui_ctx *ctx) {
-    
-    if(!ui_stack_empty(ctx->clip_stack)) {
-        ui_pop(ctx->clip_stack);
-        if(!ui_stack_empty(ctx->clip_stack))
-            ui_clip(ui_stack_get_last(ctx->clip_stack));
-    }
-    if(ui_stack_empty(ctx->clip_stack))
-        ui_clip_end();
-}
-
 void ui_update_cursor(ui_ctx *ctx, int w, int h) {
     ui_container *container = ctx->current_container;
     if(container != NULL) {
@@ -352,24 +334,15 @@ void ui_push_container(ui_ctx *ctx, ui_id id) {
     new_container->cursor = (ui_vec2){.x = 0, .y = 0};
     new_container->max_x = 0;
     new_container->max_y = 0;
-
-    ui_vec4 clip_rect;
-    clip_rect.x = new_container->origin.x;
-    clip_rect.y = new_container->origin.y;
-    clip_rect.w = new_container->width;
-    clip_rect.h = new_container->height;
-    ui_push_clip_rect(ctx, clip_rect);
-
     ctx->current_container = new_container;
 }
 
 void ui_pop_container(ui_ctx *ctx) {
     ui_container *container = ctx->current_container;
     ui_assert(container != NULL);
-    int dx = ui_min(container->width, container->max_x);
-    int dy = ui_min(container->height, container->max_y);
+    int dx = container->max_x;
+    int dy = container->max_y;
     ui_pop(ctx->container_stack);
-    ui_pop_clip_rect(ctx);
     if(ui_stack_empty(ctx->container_stack))
         ctx->current_container = NULL;
     else
@@ -381,15 +354,15 @@ void ui_pop_container(ui_ctx *ctx) {
 
 bool ui_button(ui_ctx *ctx, const char *label) {
     ui_id id = ui_get_id(ctx, label, strlen(label));
-    new_selectable_widget(ctx, id);
-    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
-        ctx->active_item = id;
     const int w = ui_get_text_width(label, UI_FONT_SIZE) + 2 * UI_MARGIN;
     const int h = UI_FONT_SIZE + 2 * UI_MARGIN;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->origin.x + container->scroll.x + container->cursor.x;
-    const int y = container->origin.y + +container->scroll.y + container->cursor.y;
+    const int x = container->origin.x + ctx->scroll.x + container->cursor.x;
+    const int y = container->origin.y + ctx->scroll.y + container->cursor.y;
+    ui_new_selectable_widget(ctx, id, (ui_vec4){.x = x, .y = y, .w = w, .h = h});
+    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
+        ctx->active_item = id;
     ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
         ui_draw_rectangle(x, y, w, h, UI_COLOR_RED);
@@ -403,14 +376,14 @@ bool ui_button(ui_ctx *ctx, const char *label) {
 
 bool ui_checkbox(ui_ctx *ctx, const char *label, bool *checked) {
     ui_id id = ui_get_id(ctx, label, strlen(label));
-    new_selectable_widget(ctx, id);
-    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
-        ctx->active_item = id;
     ui_container *container = ctx->current_container;
     ui_assert(container  != NULL);
-    const int x = container->origin.x + container->scroll.x + container->cursor.x;
-    const int y = container->origin.y + +container->scroll.y + container->cursor.y;
+    const int x = container->origin.x + ctx->scroll.x + container->cursor.x;
+    const int y = container->origin.y + ctx->scroll.y + container->cursor.y;
     const int w = 20, h = 20;
+    ui_new_selectable_widget(ctx, id, (ui_vec4){.x = x, .y = y, .w = w, .h = h});
+    if(ctx->hot_item == id && ui_key_event(ctx, UI_KEY_ENTER))
+        ctx->active_item = id;
     if(*checked)
         ui_fill_rectangle(x, y, w, h, UI_COLOR_DARKGREY);
     if(ctx->active_item == id)
@@ -427,17 +400,14 @@ bool ui_checkbox(ui_ctx *ctx, const char *label, bool *checked) {
     return clicked;
 }
 
-void ui_begin_container(ui_ctx *ctx, const char *name, int width, int height) {
+void ui_begin_container(ui_ctx *ctx, const char *name) {
     ui_id id = ui_get_id(ctx, name, strlen(name));
     ui_push_container(ctx, id);
     ui_container *container = ctx->current_container;
-    container->width = width;
-    container->height = height;
 }
 
 void ui_end_container(ui_ctx *ctx) {
     ui_pop_container(ctx);
-    ui_pop_clip_rect(ctx);
 }
 
 void ui_nextline(ui_ctx *ctx) {

@@ -12,14 +12,15 @@ int main(void) {
     InitWindow(TFT_WIDTH, TFT_HEIGHT, "ui");
     SetTargetFPS(60);
     ui_ctx ctx = {0};
+    ui_init(&ctx, TFT_WIDTH, TFT_HEIGHT);
     while (!WindowShouldClose()) {
         handle_keys(&ctx);
         ui_begin(&ctx);
         ClearBackground(BLACK);
-        ui_begin_container(&ctx, "root", TFT_WIDTH, TFT_HEIGHT);
+        ui_begin_container(&ctx, "root");
         char label[32];
-        for(int y = 0; y < 4; y++) {
-            ui_begin_container(&ctx, "column", 80, 240);
+        for(int y = 0; y < 5; y++) {
+            ui_begin_container(&ctx, "column");
             for(int x = 0; x < 4; x++) {
                 snprintf(label, sizeof(label), "Button %d", y * 4 + x);
                 if(ui_button(&ctx, label))
