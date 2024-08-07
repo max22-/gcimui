@@ -138,7 +138,7 @@ private:
     uint8_t state, new_state, events; // state: saved key states, new_state: updated key states, events: detects rising edges of keys
     unsigned long timestamp;
     bool is_repeat;
-    const int  key_repeat_delay = 500, key_repeat_interval = 30; // in milliseconds
+    const unsigned long key_repeat_delay = 500, key_repeat_interval = 30; // in milliseconds
 };
 
 class Style {
