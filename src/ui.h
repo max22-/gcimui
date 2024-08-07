@@ -182,9 +182,6 @@ private:
 class Container {
 public:
     Container(Vec2<int> origin) : bounds(origin.x, origin.y, 0, 0), cursor(0, 0) {}
-    #warning are max_x and max_y used ?
-    int max_x() { return bounds.x + bounds.w; }
-    int max_y() { return bounds.y + bounds.h; } // max_y is used to begin a new row
     void update_cursor(Vec2<int> wh) { 
         cursor.x += wh.x;
         bounds.w = std::max(bounds.w, cursor.x);
