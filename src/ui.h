@@ -70,7 +70,7 @@ public:
 template <typename T>
 class Rectangle {
 public:
-    Rectangle(T x, T y, T w, T h) : x(x), y(y), w(w), h(w) {}
+    Rectangle(T x, T y, T w, T h) : x(x), y(y), w(w), h(h) {}
     Rectangle(Vec2<T> xy, Vec2<T> wh) : x(xy.x), y(xy.y), w(wh.x), h(wh.y) {}
     Vec2<T> xy() { return Vec2<T>(x, y); }
     Vec2<T> wh() { return Vec2<T>(w, h); }
