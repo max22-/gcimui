@@ -135,9 +135,9 @@ public:
         state = new_state;
     }
 private:
-    uint8_t state, new_state, events; // state: saved key states, new_state: updated key states, events: detects rising edges of keys
-    unsigned long timestamp;
-    bool is_repeat;
+    uint8_t state = 0, new_state = 0, events = 0; // state: saved key states, new_state: updated key states, events: detects rising edges of keys
+    unsigned long timestamp = 0;
+    bool is_repeat = false;
     const unsigned long key_repeat_delay = 500, key_repeat_interval = 30; // in milliseconds
 };
 
