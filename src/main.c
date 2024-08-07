@@ -13,16 +13,18 @@ int main(void) {
     SetTargetFPS(60);
     ui_ctx ctx = {0};
     ui_init(&ctx, TFT_WIDTH, TFT_HEIGHT);
+    int rows = 20, cols = 5;
     while (!WindowShouldClose()) {
         handle_keys(&ctx);
+        BeginDrawing();
         ui_begin(&ctx);
         ClearBackground(BLACK);
         ui_begin_container(&ctx, "root");
         char label[32];
-        for(int y = 0; y < 5; y++) {
+        for(int x = 0; x < cols; x++) {
             ui_begin_container(&ctx, "column");
-            for(int x = 0; x < 4; x++) {
-                snprintf(label, sizeof(label), "Button %d", y * 4 + x);
+            for(int y = 0; y < rows; y++) {
+                snprintf(label, sizeof(label), "Button %d", y * cols + x);
                 if(ui_button(&ctx, label))
                     printf("%s clicked!\n", label);
                 ui_nextline(&ctx);
@@ -37,8 +39,8 @@ int main(void) {
                 printf("hidden button clicked!\n");
         }
         ui_end_container(&ctx);
-        EndDrawing();
         ui_end(&ctx);
+        EndDrawing();
     }
     CloseWindow();
     return 0;

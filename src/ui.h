@@ -149,6 +149,7 @@ typedef struct Container {
 
 typedef struct Style {
     int spacing;
+    int slider_width;
 } ui_style;
 
 // Warning : make sure that the context is valid when zero-initialized !!!
@@ -162,9 +163,13 @@ struct UIContext {
     ui_stack(ui_id, UI_CONTAINER_STACK_SIZE) container_stack;
     ui_pool(container, UI_CONTAINER_POOL_SIZE) container_pool;
     ui_container *current_container;
+    ui_vec2 content_size;
     ui_vec2 screen_size;
     ui_vec2 scroll; /* global scrolling (i decided to not support per-container scrolling)*/
 };
+
+void draw_h_slider(ui_ctx *ctx);
+void draw_v_slider(ui_ctx *ctx);
 
 void ui_init(ui_ctx *ctx, int screen_width, int screen_height) {
     ctx->screen_size.x = screen_width;
@@ -174,7 +179,8 @@ void ui_init(ui_ctx *ctx, int screen_width, int screen_height) {
 ui_generate_pool_get_func(container, container_pool)
 
 static ui_style ui_default_style = {
-    .spacing = 4
+    .spacing = 4,
+    .slider_width = 10
 };
 
 static void ui_new_selectable_widget(ui_ctx *ctx, ui_id id, ui_vec4 bounds) {
@@ -248,6 +254,7 @@ void ui_begin(ui_ctx *ctx) {
     ui_clear_stack(ctx->widgets_locations);
     ui_clear_stack(ctx->id_stack);
     ctx->style = ui_default_style;
+    ctx->content_size = (ui_vec2){.x = 0, .y = 0};
     { /* Input handling ************** */
         ctx->input.events = ~ctx->input.state & ctx->input.new_state; // detect rising edge
         if(ctx->input.events != 0)
@@ -271,6 +278,10 @@ void ui_begin(ui_ctx *ctx) {
 }
 
 void ui_end(ui_ctx *ctx) {
+    if(ctx->content_size.x > ctx->screen_size.x)
+        draw_h_slider(ctx);
+    if(ctx->content_size.x > ctx->screen_size.x)
+        draw_v_slider(ctx);
     if(!ui_key_event(ctx, UI_KEY_ENTER))
         ctx->active_item = 0;
     ui_vec2 dir = {0, 0};
@@ -314,6 +325,8 @@ void ui_pop_id(ui_ctx *ctx) {
     ui_pop(ctx->id_stack);
 }
 
+/* Containers *************************************************************** */
+
 void ui_update_cursor(ui_ctx *ctx, int w, int h) {
     ui_container *container = ctx->current_container;
     if(container != NULL) {
@@ -343,10 +356,13 @@ void ui_pop_container(ui_ctx *ctx) {
     int dx = container->max_x;
     int dy = container->max_y;
     ui_pop(ctx->container_stack);
-    if(ui_stack_empty(ctx->container_stack))
+    if(ui_stack_empty(ctx->container_stack)) {
         ctx->current_container = NULL;
-    else
+        ctx->content_size = (ui_vec2){.x = dx, .y = dy};
+    }
+    else {
         ctx->current_container = ui_container_pool_get(ctx, ui_stack_get_last(ctx->container_stack));
+    }
     ui_update_cursor(ctx, dx, dy);
 }
 
@@ -416,6 +432,31 @@ void ui_nextline(ui_ctx *ctx) {
     container->cursor.y = container->max_y + ctx->style.spacing;
     container->cursor.x = 0;
 }
+
+/* Special widgets ********************************************************** */
+
+void draw_h_slider(ui_ctx *ctx) {
+    int slider_w = ctx->style.slider_width;
+    int screen_w = ctx->screen_size.x;
+    int screen_h = ctx->screen_size.y;
+    ui_fill_rectangle(0, screen_h - slider_w, screen_w, slider_w, UI_COLOR_DARKGREY);
+    int x = -ctx->scroll.x * screen_w / ctx->content_size.x;
+    int w = screen_w * screen_w / ctx->content_size.x;
+    ui_fill_rectangle(x, screen_h - slider_w, w, slider_w, UI_COLOR_LIGHTGREY);
+}
+
+void draw_v_slider(ui_ctx *ctx) {
+    int slider_w = ctx->style.slider_width;
+    int screen_w = ctx->screen_size.x;
+    int screen_h = ctx->screen_size.y;
+    ui_fill_rectangle(screen_w - slider_w, 0, slider_w, screen_h, UI_COLOR_DARKGREY);
+    int y = -ctx->scroll.y * screen_h / ctx->content_size.y;
+    int h = screen_h * screen_h / ctx->content_size.y;
+    ui_fill_rectangle(screen_w - slider_w, y, slider_w, h, UI_COLOR_LIGHTGREY);
+}
+
+/* ************************************************************************** */
+
 
 #endif
 #endif
