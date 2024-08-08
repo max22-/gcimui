@@ -198,7 +198,15 @@ public:
 
 class Context {
 public:
-    Context(Vec2<int> screen_size) : screen_size(screen_size) {
+    static Context& get() {
+        static Context instance;
+        return instance;
+    }
+    Context(Context const&) = delete;
+    void operator=(Context const&) = delete;
+
+    void init(int screen_width, int screen_height) {
+        screen_size = Vec2<int>(screen_width, screen_height);
         hot_item = 0;
         active_item = 0;
         frame = 0;
@@ -306,6 +314,8 @@ public:
     
 
 private:
+    Context() {}
+
     void new_selectable_widget(ui_id id, Rectangle<int> bounds) {
         if(hot_item == 0)
             hot_item = id;
