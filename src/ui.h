@@ -7,6 +7,7 @@
 #include <cstring>
 #include <vector>
 #include <unordered_map>
+#include <string>
 
 #define ui_assert(x)                                                            \
     do {                                                                        \
@@ -305,6 +306,38 @@ public:
         if(clicked)
             *checked = !*checked;
         return clicked;
+    }
+
+    bool input_u16(const char *label, uint16_t *x) {
+        ui_id id = id_stack.get_id(label, strlen(label));
+        const char *number = std::to_string(*x).c_str();
+        const int w = ui_get_text_width(number, style.font_size) + 2 * style.margin;
+        const int h = style.font_size + 2 * style.margin;
+        Vec2<int> wh(w, h);
+        Container *container = current_container();
+        ui_assert(container != NULL);
+        Vec2<int> origin = container->bounds.xy();
+        Vec2<int> xy = origin + scroll + container->cursor;
+        Rectangle<int> rect(xy, wh);
+        new_selectable_widget(id, rect);
+        if(hot_item == id && input.pressed_keys() == (KEY::UP | KEY::SELECT)) {
+            (*x)++;
+            active_item = id;
+        }
+        if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
+            if(*x > 0)
+                (*x)--;
+            active_item = id;
+        }
+        ui_fill_rectangle(rect, Color::dark_grey());
+        if(active_item == id)
+            ui_draw_rectangle(rect, Color::red());
+        else if(hot_item == id)
+            ui_draw_rectangle(rect, Color::green());
+        ui_draw_text(number, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        widgets_locations[id] = xy;
+        update_cursor(wh);
+        return (input.pressed_keys() != (KEY::UP | KEY::SELECT)) && (input.pressed_keys() != (KEY::DOWN | KEY::SELECT)) && hot_item == id && active_item == id;
     }
 
     void begin_container(const char *name) {
