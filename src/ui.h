@@ -217,6 +217,7 @@ public:
     }
     
     void begin_frame() {
+        hot_item_exists = false;
         widgets_locations.clear();
         id_stack.clear();
         style = Style();
@@ -245,6 +246,8 @@ public:
             update_hot_item_by_direction(dir);
         input.end_frame();
         ui_assert(container_stack.empty());
+        if(!hot_item_exists)
+            hot_item = 0;
     }
 
     /* Widgets ****************************************************************** */
@@ -320,6 +323,7 @@ private:
         if(hot_item == 0)
             hot_item = id;
         if(hot_item == id) {
+            hot_item_exists = true;
             int dx = screen_size.x - (bounds.x + bounds.w);
             int dy = screen_size.y - (bounds.y + bounds.h);
             if(dx < 0) scroll.x += dx;
@@ -406,6 +410,7 @@ private:
     }
     struct Input input;
     ui_id hot_item, active_item;
+    bool hot_item_exists;
     int frame;
     Style style;
     std::unordered_map<ui_id, Vec2<int>> widgets_locations;
