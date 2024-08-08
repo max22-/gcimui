@@ -114,8 +114,10 @@ public:
     }
     void update() {
         events = ~state & new_state; // detect rising edge
-        if(events != 0)
+        if(events != 0) {
             timestamp = ui_millis(); // we reset the timestamp when new keys are pressed
+            is_repeat = false;
+        }
         if(new_state == 0)
             is_repeat = false;
         if(is_repeat) { // a repetition has already started
