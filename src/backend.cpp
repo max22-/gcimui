@@ -57,6 +57,8 @@ void handle_keys(UI::Context& ui) {
     ui.set_key_state(UI::KEY::DOWN, IsKeyDown(KEY_DOWN));
     ui.set_key_state(UI::KEY::LEFT, IsKeyDown(KEY_LEFT));
     ui.set_key_state(UI::KEY::RIGHT, IsKeyDown(KEY_RIGHT));
-    ui.set_key_state(UI::KEY::ENTER, IsKeyDown(KEY_ENTER));
-    ui.set_key_state(UI::KEY::BACK, IsKeyDown(KEY_BACKSPACE));
+    ui.set_key_state(UI::KEY::A, IsKeyDown(KEY_ENTER));
+    ui.set_key_state(UI::KEY::B, IsKeyDown(KEY_BACKSPACE));
+    ui.set_key_state(UI::KEY::SELECT, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT));
+    ui.set_key_state(UI::KEY::START, IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
 }

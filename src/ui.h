@@ -98,8 +98,10 @@ enum KEY {
     DOWN = 1 << 1,
     LEFT = 1 << 2,
     RIGHT = 1 << 3,
-    ENTER = 1 << 4,
-    BACK = 1 << 5,
+    A = 1 << 4,
+    B = 1 << 5,
+    SELECT = 1 << 6,
+    START = 1 << 7
 };
 
 class Input {
@@ -234,7 +236,7 @@ public:
             draw_h_slider();
         if(content_size.x > screen_size.x)
             draw_v_slider();
-        if(input.pressed_keys() != KEY::ENTER)
+        if(input.pressed_keys() != KEY::A)
             active_item = 0;
         Vec2<int> dir;
         if(input.pressed_keys() == KEY::UP)
@@ -266,7 +268,7 @@ public:
         Vec2<int> xy = origin + scroll + container->cursor;
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
-        if(hot_item == id && input.pressed_keys() == KEY::ENTER)
+        if(hot_item == id && input.pressed_keys() == KEY::A)
             active_item = id;
         ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
@@ -276,7 +278,7 @@ public:
         ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
         widgets_locations[id] = xy;
         update_cursor(wh);
-        return input.pressed_keys() != KEY::ENTER && hot_item == id && active_item == id;
+        return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
     }
 
     bool checkbox(const char *label, bool *checked) {
@@ -287,7 +289,7 @@ public:
         Vec2<int> wh(20, 20);
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
-        if(hot_item == id && input.pressed_keys() == KEY::ENTER)
+        if(hot_item == id && input.pressed_keys() == KEY::A)
             active_item = id;
         if(*checked)
             ui_fill_rectangle(rect, Color::dark_grey());
@@ -299,7 +301,7 @@ public:
             ui_draw_rectangle(rect, Color::white());
         widgets_locations[id] = xy;
         update_cursor(wh);
-        bool clicked = input.pressed_keys() != KEY::ENTER && hot_item == id && active_item == id;
+        bool clicked = input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
         if(clicked)
             *checked = !*checked;
         return clicked;
