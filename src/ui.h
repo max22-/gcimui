@@ -93,21 +93,21 @@ extern void ui_error(const char *fmt, ...);
 namespace UI {
 
 enum KEY {
-    NONE,
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    ENTER,
-    BACK,
+    NONE = 0,
+    UP = 1 << 0,
+    DOWN = 1 << 1,
+    LEFT = 1 << 2,
+    RIGHT = 1 << 3,
+    ENTER = 1 << 4,
+    BACK = 1 << 5,
 };
 
 class Input {
 public:
     void set_key_state(enum KEY key, bool state) {
-        uint8_t mask = ~(1 << key);
+        uint8_t mask = ~key;
         new_state &= mask;
-        new_state |= (state ? 1 : 0) << key;
+        new_state |= state ? key : 0;
     }
     void update() {
         events = ~state & new_state; // detect rising edge
@@ -128,8 +128,11 @@ public:
             }
         }
     }
-    bool key_event(enum KEY key) {
-        return (events & (1 << key)) != 0;
+    uint8_t pressed_keys() {
+        if(events != 0)
+            return new_state;
+        else
+            return 0;
     }
     void end_frame() {
         state = new_state;
@@ -231,16 +234,16 @@ public:
             draw_h_slider();
         if(content_size.x > screen_size.x)
             draw_v_slider();
-        if(!input.key_event(KEY::ENTER))
+        if(input.pressed_keys() != KEY::ENTER)
             active_item = 0;
         Vec2<int> dir;
-        if(input.key_event(KEY::UP))
+        if(input.pressed_keys() == KEY::UP)
             dir.y--;
-        if(input.key_event(KEY::DOWN))
+        if(input.pressed_keys() == KEY::DOWN)
             dir.y++;
-        if(input.key_event(KEY::LEFT))
+        if(input.pressed_keys() == KEY::LEFT)
             dir.x--;
-        if(input.key_event(KEY::RIGHT))
+        if(input.pressed_keys() == KEY::RIGHT)
             dir.x++;
         if(dir.x != 0 || dir.y != 0)
             update_hot_item_by_direction(dir);
@@ -258,12 +261,12 @@ public:
         const int h = style.font_size + 2 * style.margin;
         Vec2<int> wh(w, h);
         Container *container = current_container();
-        ui_assert(container  != NULL);
+        ui_assert(container != NULL);
         Vec2<int> origin = container->bounds.xy();
         Vec2<int> xy = origin + scroll + container->cursor;
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
-        if(hot_item == id && input.key_event(KEY::ENTER))
+        if(hot_item == id && input.pressed_keys() == KEY::ENTER)
             active_item = id;
         ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
@@ -273,7 +276,7 @@ public:
         ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
         widgets_locations[id] = xy;
         update_cursor(wh);
-        return !input.key_event(KEY::ENTER) && hot_item == id && active_item == id;
+        return input.pressed_keys() != KEY::ENTER && hot_item == id && active_item == id;
     }
 
     bool checkbox(const char *label, bool *checked) {
@@ -284,7 +287,7 @@ public:
         Vec2<int> wh(20, 20);
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
-        if(hot_item == id && input.key_event(KEY::ENTER))
+        if(hot_item == id && input.pressed_keys() == KEY::ENTER)
             active_item = id;
         if(*checked)
             ui_fill_rectangle(rect, Color::dark_grey());
@@ -296,7 +299,7 @@ public:
             ui_draw_rectangle(rect, Color::white());
         widgets_locations[id] = xy;
         update_cursor(wh);
-        bool clicked = !input.key_event(KEY::ENTER) && hot_item == id && active_item == id;
+        bool clicked = input.pressed_keys() != KEY::ENTER && hot_item == id && active_item == id;
         if(clicked)
             *checked = !*checked;
         return clicked;
