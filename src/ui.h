@@ -174,6 +174,9 @@ public:
     void clear() {
         stack.clear();
     }
+    bool empty() {
+        return stack.empty();
+    }
 private:
     /* 32bit fnv-1a hash */
     ui_id hash(ui_id id, const void *data, size_t size) {
@@ -254,8 +257,49 @@ public:
             update_hot_item_by_direction(dir);
         input.end_frame();
         ui_assert(container_stack.empty());
+        ui_assert(id_stack.empty());
         if(!hot_item_exists)
             hot_item = 0;
+    }
+
+    void push_id(char c) {
+        id_stack.push((void*)&c, sizeof(c));
+    }
+
+    void push_id(unsigned char c) {
+        id_stack.push((void*)&c, sizeof(c));
+    }
+
+    void push_id(unsigned short s) {
+        id_stack.push((void*)&s, sizeof(s));
+    }
+    
+    void push_id(short s) {
+        id_stack.push((void*)&s, sizeof(s));
+    }
+
+    void push_id(int i) {
+        id_stack.push((void*)&i, sizeof(i));
+    }
+
+    void push_id(long l) {
+        id_stack.push((void*)&l, sizeof(l));
+    }
+
+    void push_id(unsigned long l) {
+        id_stack.push((void*)&l, sizeof(l));
+    }
+
+    void push_id(const char *s, size_t size) {
+        id_stack.push((void*)s, size);
+    }
+
+    void push_id(std::string s) {
+        id_stack.push((void*)s.c_str(), s.length());
+    }
+
+    void pop_id() {
+        id_stack.pop();
     }
 
     /* Widgets ****************************************************************** */
