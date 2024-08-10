@@ -369,7 +369,9 @@ public:
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == (KEY::UP | KEY::SELECT)) {
-            *x = clamp(*x + step, min_value, max_value);
+            if(*x < max_value)
+                *x += step;
+            *x = clamp(*x, min_value, max_value);
             active_item = id;
         }
         if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
