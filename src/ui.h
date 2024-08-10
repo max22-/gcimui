@@ -373,7 +373,9 @@ public:
             active_item = id;
         }
         if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
-            *x = clamp(*x - step, min_value, max_value);
+            if(*x > min_value) // we check if we aren't already at the min value to avoid wrap around
+                *x -= step;
+            *x = clamp(*x, min_value, max_value);
             active_item = id;
         }
         ui_fill_rectangle(rect, Color::dark_grey());
