@@ -36,7 +36,7 @@ void page1() {
     }
     ui.nextline();
     static bool checked = false;
-    ui.checkbox("checkbox", &checked);
+    ui.checkbox(&checked);
     if(checked) {
         if(ui.button("hidden button")) {
             printf("hidden button clicked!\n");

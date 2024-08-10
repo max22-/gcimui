@@ -328,8 +328,8 @@ public:
         return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
     }
 
-    bool checkbox(const char *label, bool *checked) {
-        ui_id id = id_stack.get_id(label, strlen(label));
+    bool checkbox(bool *checked) {
+        ui_id id = id_stack.get_id((void*)&checked, sizeof(checked));
         Container *container = current_container();
         Vec2<int> origin = container->bounds.xy();
         Vec2<int> xy = origin + scroll + container->cursor;
