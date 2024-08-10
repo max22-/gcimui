@@ -354,8 +354,9 @@ public:
         return clicked;
     }
 
-    bool input_u16(const char *label, uint16_t *x) {
-        ui_id id = id_stack.get_id(label, strlen(label));
+    bool input_int(int *x, int min_value, int max_value) {
+        *x = clamp(*x, min_value, max_value);
+        ui_id id = id_stack.get_id((void*)&x, sizeof(x));
         const char *number = std::to_string(*x).c_str();
         const int w = ui_get_text_width(number, style.font_size) + 2 * style.margin;
         const int h = style.font_size + 2 * style.margin;
@@ -367,12 +368,11 @@ public:
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == (KEY::UP | KEY::SELECT)) {
-            (*x)++;
+            *x = clamp(*x + 1, min_value, max_value);
             active_item = id;
         }
         if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
-            if(*x > 0)
-                (*x)--;
+            *x = clamp(*x - 1, min_value, max_value);
             active_item = id;
         }
         ui_fill_rectangle(rect, Color::dark_grey());
@@ -402,6 +402,12 @@ public:
 
 private:
     Context() {}
+
+    static int clamp(int x, int min_value, int max_value) {
+        if(x < min_value) x = min_value;
+        if(x > max_value) x = max_value;
+        return x;
+    }
 
     void new_selectable_widget(ui_id id, Rectangle<int> bounds) {
         if(hot_item == 0)

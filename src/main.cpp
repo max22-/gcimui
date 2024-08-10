@@ -13,9 +13,9 @@ int page = 0;
 void menu() {
     if(ui.button("page 1"))
         page = 1;
-    static uint16_t x;
+    static int x;
     ui.nextline();
-    ui.input_u16("test", &x);
+    ui.input_int(&x, 0, 100);
 }
 
 void page1() {
