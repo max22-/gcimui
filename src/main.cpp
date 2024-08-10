@@ -13,9 +13,12 @@ int page = 0;
 void menu() {
     if(ui.button("page 1"))
         page = 1;
-    static int x;
     ui.nextline();
-    ui.input_int(&x, 0, 100);
+    static int x;
+    ui.input_number<int>(&x, 0, 100, 10);
+    ui.nextline();
+    static float f;
+    ui.input_number<float>(&f, 0, 100, 0.1);
 }
 
 void page1() {

@@ -354,7 +354,8 @@ public:
         return clicked;
     }
 
-    bool input_int(int *x, int min_value, int max_value) {
+    template <typename T>
+    bool input_number(T *x, T min_value, T max_value, T step = 1) {
         *x = clamp(*x, min_value, max_value);
         ui_id id = id_stack.get_id((void*)&x, sizeof(x));
         const char *number = std::to_string(*x).c_str();
@@ -368,11 +369,11 @@ public:
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == (KEY::UP | KEY::SELECT)) {
-            *x = clamp(*x + 1, min_value, max_value);
+            *x = clamp(*x + step, min_value, max_value);
             active_item = id;
         }
         if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
-            *x = clamp(*x - 1, min_value, max_value);
+            *x = clamp(*x - step, min_value, max_value);
             active_item = id;
         }
         ui_fill_rectangle(rect, Color::dark_grey());
@@ -403,7 +404,8 @@ public:
 private:
     Context() {}
 
-    static int clamp(int x, int min_value, int max_value) {
+    template <typename T>
+    static T clamp(T x, T min_value, T max_value) {
         if(x < min_value) x = min_value;
         if(x > max_value) x = max_value;
         return x;
