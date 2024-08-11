@@ -328,6 +328,39 @@ public:
         return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
     }
 
+    bool listbox(size_t *selected, const std::vector<std::string> &items) {
+        *selected = clamp<int>(*selected, 0, items.size());
+        const char *label = items[*selected].c_str();
+        ui_id id = id_stack.get_id((void*)&items, sizeof(&items));
+        const int w = ui_get_text_width(label, style.font_size) + 2 * style.margin;
+        const int h = style.font_size + 2 * style.margin;
+        Vec2<int> wh(w, h);
+        Container *container = current_container();
+        ui_assert(container != NULL);
+        Vec2<int> origin = container->bounds.xy();
+        Vec2<int> xy = origin + scroll + container->cursor;
+        Rectangle<int> rect(xy, wh);
+        new_selectable_widget(id, rect);
+        if(hot_item == id && input.pressed_keys() == (KEY::UP | KEY::SELECT)) {
+            if(*selected < items.size() - 1)
+                *selected += 1;
+            active_item = id;
+        } else if(hot_item == id && input.pressed_keys() == (KEY::DOWN | KEY::SELECT)) {
+            if(*selected > 0)
+                *selected -= 1;
+            active_item = id;
+        }
+        ui_fill_rectangle(rect, Color::dark_grey());
+        if(active_item == id)
+            ui_draw_rectangle(rect, Color::red());
+        else if(hot_item == id)
+            ui_draw_rectangle(rect, Color::green());
+        ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        widgets_locations[id] = xy;
+        update_cursor(wh);
+        return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
+    }
+
     bool checkbox(bool *checked) {
         ui_id id = id_stack.get_id((void*)&checked, sizeof(checked));
         Container *container = current_container();
