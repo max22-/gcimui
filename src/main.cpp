@@ -20,7 +20,7 @@ void menu() {
     static float f;
     ui.input_number<float>(&f, 0, 100, 0.1);
     ui.nextline();
-    static size_t selected = 0;
+    static int selected = 0;
     static std::vector<std::string> items = {"foo", "bar", "baz"};
     ui.listbox(&selected, items);
 }
