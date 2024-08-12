@@ -23,6 +23,10 @@ void menu() {
     static int selected = 0;
     static std::vector<std::string> items = {"foo", "bar", "baz"};
     ui.listbox(&selected, items);
+    ui.nextline();
+    static std::string text = "HELLO";
+    if(ui.input_text(text, 0))
+        printf("new text: %s\n", text.c_str());
 }
 
 void page1() {
@@ -51,6 +55,7 @@ void page1() {
 }
 
 
+
 int main(void) {
     InitWindow(TFT_WIDTH, TFT_HEIGHT, "ui");
     SetTargetFPS(60);
@@ -61,13 +66,15 @@ int main(void) {
         ui.begin_frame();
         ClearBackground(BLACK);
         ui.begin_container("root");
-        switch(page) {
-            case 0:
-                menu();
-                break;
-            case 1:
-                page1();
-                break;
+        if(!ui.is_keyboard_displayed()) {
+            switch(page) {
+                case 0:
+                    menu();
+                    break;
+                case 1:
+                    page1();
+                    break;
+            }
         }
         ui.end_container();
         ui.end_frame();

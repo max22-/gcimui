@@ -15,6 +15,8 @@
             ui_error("%s:%d: assertion '%s' failed", __FILE__, __LINE__, #x);   \
     } while(0)
 
+#define UI_ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 namespace UI {
 
 typedef unsigned int ui_id;
@@ -207,6 +209,13 @@ public:
     Vec2<int> cursor;
 };
 
+class VirtualKeyboardData {
+public:
+    VirtualKeyboardData(std::string &text_input, size_t max_size = 0) : text_input(text_input), max_size(max_size) {}
+    std::string &text_input;
+    const size_t max_size;
+};
+
 
 class Context {
 public:
@@ -320,6 +329,21 @@ public:
     }
 
     /* Widgets ****************************************************************** */
+
+    void label(const char *label) {
+        const int w = ui_get_text_width(label, style.font_size) + 2 * style.padding;
+        const int h = style.font_size + 2 * style.padding;
+        Vec2<int> wh = get_widget_size(w, h);
+        Container *container = current_container();
+        ui_assert(container != NULL);
+        Vec2<int> origin = container->bounds.xy();
+        Vec2<int> xy = origin + scroll + container->cursor;
+        Rectangle<int> rect(xy, wh);
+        ui_clip(rect);
+        ui_draw_text(label, xy + Vec2<int>(style.padding, style.padding), style.font_size, Color::white());
+        ui_clip_end();
+        update_cursor(wh);
+    }
 
     bool button(const char *label) {
         ui_id id = id_stack.get_id(label, strlen(label));
@@ -449,6 +473,35 @@ public:
         return (input.pressed_keys() != (KEY::UP | KEY::SELECT)) && (input.pressed_keys() != (KEY::DOWN | KEY::SELECT)) && hot_item == id && active_item == id;
     }
 
+    bool input_text(std::string &text, size_t max_size) {
+        ui_id id = id_stack.get_id(text.c_str(), text.size());
+        const int w = ui_get_text_width(text.c_str(), style.font_size) + 2 * style.padding;
+        const int h = style.font_size + 2 * style.padding;
+        Vec2<int> wh = get_widget_size(w, h);
+        Container *container = current_container();
+        ui_assert(container != NULL);
+        Vec2<int> origin = container->bounds.xy();
+        Vec2<int> xy = origin + scroll + container->cursor;
+        Rectangle<int> rect(xy, wh);
+        new_selectable_widget(id, rect);
+        if(hot_item == id && input.pressed_keys() == KEY::A) {
+            virtual_keyboard_data = new VirtualKeyboardData(text, max_size);
+            active_item = id; 
+        }
+        ui_clip(rect);
+        ui_fill_rectangle(rect, Color::dark_grey());
+        if(active_item == id)
+            ui_draw_rectangle(rect, Color::red());
+        else if(hot_item == id)
+            ui_draw_rectangle(rect, Color::green());
+        ui_draw_text(text.c_str(), xy + Vec2<int>(style.padding, style.padding), style.font_size, Color::black());
+        ui_clip_end();
+        widgets_locations[id] = xy;
+        update_cursor(wh);
+        #warning TODO : handle return value / active item. The stuff below doesn't work
+        return virtual_keyboard_data == nullptr && hot_item == id && active_item == id;
+    }
+
     void begin_container(const char *name) {
         push_container();
     }
@@ -461,7 +514,32 @@ public:
         current_container()->next_line(style.v_margin);
     }
 
-    
+    /* Virtual keyboard ***************************************************** */
+    bool is_keyboard_displayed() {
+        if(virtual_keyboard_data == nullptr)
+            return false;
+        
+        std::string &text_input = virtual_keyboard_data->text_input;
+        const size_t max_size = virtual_keyboard_data->max_size;
+        const char *keys[] = {"A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"};
+        label(text_input.c_str());
+        nextline();
+        for(int x = 0; x < UI_ARRAY_SIZE(keys); x++) {
+            if(button(keys[x]) && (text_input.size() < max_size || max_size == 0))
+                virtual_keyboard_data->text_input.append(keys[x]);
+        }
+        if(button("<-") && virtual_keyboard_data->text_input.size() > 0)
+            text_input.pop_back();
+        nextline();
+        if(button("OK")) {
+            delete virtual_keyboard_data;
+            virtual_keyboard_data = nullptr;
+            return false;
+        } else {
+            return true;
+        }
+    }
+    /* ********************************************************************** */
 
 private:
     Context() {}
@@ -573,7 +651,8 @@ private:
     Vec2<int> content_size;
     Vec2<int> screen_size;
     Vec2<int> scroll; /* global scrolling (i decided to not support per-container scrolling)*/
-    Vec2<int> *next_widget_size;
+    Vec2<int> *next_widget_size = nullptr;
+    VirtualKeyboardData *virtual_keyboard_data = nullptr;
 };
 
 
@@ -595,8 +674,6 @@ private:
 /* Macros ******************************************************************* */
 
 #define UI_CONTAINER_POOL_SIZE 32
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 
 
