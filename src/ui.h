@@ -302,13 +302,29 @@ public:
         id_stack.pop();
     }
 
+    void set_next_widget_size(int w, int h) {
+        next_widget_size = new Vec2<int>(w, h);
+    }
+
+    Vec2<int> get_widget_size(int w, int h) {
+        Vec2<int> res;
+        if(next_widget_size != nullptr) {
+            res = *next_widget_size;
+            delete next_widget_size;
+            next_widget_size = nullptr;
+            return res;
+        } else {
+            return Vec2<int>(w, h);
+        }
+    }
+
     /* Widgets ****************************************************************** */
 
     bool button(const char *label) {
         ui_id id = id_stack.get_id(label, strlen(label));
         const int w = ui_get_text_width(label, style.font_size) + 2 * style.margin;
         const int h = style.font_size + 2 * style.margin;
-        Vec2<int> wh(w, h);
+        Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
         Vec2<int> origin = container->bounds.xy();
@@ -334,7 +350,7 @@ public:
         ui_id id = id_stack.get_id((void*)&items, sizeof(&items));
         const int w = ui_get_text_width(label, style.font_size) + 2 * style.margin;
         const int h = style.font_size + 2 * style.margin;
-        Vec2<int> wh(w, h);
+        Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
         Vec2<int> origin = container->bounds.xy();
@@ -366,7 +382,7 @@ public:
         Container *container = current_container();
         Vec2<int> origin = container->bounds.xy();
         Vec2<int> xy = origin + scroll + container->cursor;
-        Vec2<int> wh(20, 20);
+        Vec2<int> wh = get_widget_size(20, 20);
         Rectangle<int> rect(xy, wh);
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == KEY::A)
@@ -394,7 +410,7 @@ public:
         const char *number = std::to_string(*x).c_str();
         const int w = ui_get_text_width(number, style.font_size) + 2 * style.margin;
         const int h = style.font_size + 2 * style.margin;
-        Vec2<int> wh(w, h);
+        Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
         Vec2<int> origin = container->bounds.xy();
@@ -548,6 +564,7 @@ private:
     Vec2<int> content_size;
     Vec2<int> screen_size;
     Vec2<int> scroll; /* global scrolling (i decided to not support per-container scrolling)*/
+    Vec2<int> *next_widget_size;
 };
 
 
