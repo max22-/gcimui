@@ -30,6 +30,7 @@ void page1() {
     char label[32];
     for(int x = 0; x < cols; x++) {
         ui.begin_container("column");
+        ui.set_next_widget_size(50, 20);
         for(int y = 0; y < rows; y++) {
             snprintf(label, sizeof(label), "Button %d", y * cols + x);
             if(ui.button(label))
