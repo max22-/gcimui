@@ -151,9 +151,10 @@ private:
 
 class Style {
 public:
-    int spacing = 4;
+    int h_margin = 4;
+    int v_margin = 4;
+    int padding = 2; // padding for text inside buttons, listboxes, etc
     int slider_width = 10;
-    int margin = 2; // margin for text inside buttons
     int font_size = 16;
 };
 
@@ -198,8 +199,8 @@ public:
         bounds.w = std::max(bounds.w, cursor.x);
         bounds.h = std::max(bounds.h, cursor.y + wh.y);
     }
-    void next_line() {
-        cursor.y = bounds.h;
+    void next_line(int margin) {
+        cursor.y = bounds.h + margin;
         cursor.x = 0;
     }
     Rectangle<int> bounds;
@@ -322,8 +323,8 @@ public:
 
     bool button(const char *label) {
         ui_id id = id_stack.get_id(label, strlen(label));
-        const int w = ui_get_text_width(label, style.font_size) + 2 * style.margin;
-        const int h = style.font_size + 2 * style.margin;
+        const int w = ui_get_text_width(label, style.font_size) + 2 * style.padding;
+        const int h = style.font_size + 2 * style.padding;
         Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
@@ -339,6 +340,7 @@ public:
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
+        ui_draw_text(label, xy + Vec2<int>(style.padding, style.padding), style.font_size, Color::black());
         ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
@@ -349,8 +351,8 @@ public:
         *selected = clamp<int>(*selected, 0, items.size());
         const char *label = items[*selected].c_str();
         ui_id id = id_stack.get_id((void*)&items, sizeof(&items));
-        const int w = ui_get_text_width(label, style.font_size) + 2 * style.margin;
-        const int h = style.font_size + 2 * style.margin;
+        const int w = ui_get_text_width(label, style.font_size) + 2 * style.padding;
+        const int h = style.font_size + 2 * style.padding;
         Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
@@ -373,7 +375,7 @@ public:
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
-        ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        ui_draw_text(label, xy + Vec2<int>(style.padding, style.padding), style.font_size, Color::black());
         ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
@@ -413,8 +415,8 @@ public:
         *x = clamp(*x, min_value, max_value);
         ui_id id = id_stack.get_id((void*)&x, sizeof(x));
         const char *number = std::to_string(*x).c_str();
-        const int w = ui_get_text_width(number, style.font_size) + 2 * style.margin;
-        const int h = style.font_size + 2 * style.margin;
+        const int w = ui_get_text_width(number, style.font_size) + 2 * style.padding;
+        const int h = style.font_size + 2 * style.padding;
         Vec2<int> wh = get_widget_size(w, h);
         Container *container = current_container();
         ui_assert(container != NULL);
@@ -440,7 +442,7 @@ public:
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
-        ui_draw_text(number, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        ui_draw_text(number, xy + Vec2<int>(style.padding, style.padding), style.font_size, Color::black());
         ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
@@ -456,7 +458,7 @@ public:
     }
 
     void nextline() {
-        current_container()->next_line();
+        current_container()->next_line(style.v_margin);
     }
 
     
@@ -511,7 +513,7 @@ private:
 
     void update_cursor(Vec2<int> wh) {
         if(container_stack.empty()) return;
-        container_stack.back()->update_cursor(wh);
+        container_stack.back()->update_cursor(wh + Vec2<int>(style.h_margin, 0));
     }
 
     void push_container() {
