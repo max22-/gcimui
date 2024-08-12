@@ -333,12 +333,13 @@ public:
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == KEY::A)
             active_item = id;
+        ui_clip(rect);
         ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
-        ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
         return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
@@ -366,12 +367,14 @@ public:
                 *selected -= 1;
             active_item = id;
         }
+        ui_clip(rect);
         ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
         ui_draw_text(label, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
         return input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
@@ -387,6 +390,7 @@ public:
         new_selectable_widget(id, rect);
         if(hot_item == id && input.pressed_keys() == KEY::A)
             active_item = id;
+        ui_clip(rect);
         if(*checked)
             ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
@@ -395,6 +399,7 @@ public:
             ui_draw_rectangle(rect, Color::green());
         else
             ui_draw_rectangle(rect, Color::white());
+        ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
         bool clicked = input.pressed_keys() != KEY::A && hot_item == id && active_item == id;
@@ -429,12 +434,14 @@ public:
             *x = clamp(*x, min_value, max_value);
             active_item = id;
         }
+        ui_clip(rect);
         ui_fill_rectangle(rect, Color::dark_grey());
         if(active_item == id)
             ui_draw_rectangle(rect, Color::red());
         else if(hot_item == id)
             ui_draw_rectangle(rect, Color::green());
         ui_draw_text(number, xy + Vec2<int>(style.margin, style.margin), style.font_size, Color::black());
+        ui_clip_end();
         widgets_locations[id] = xy;
         update_cursor(wh);
         return (input.pressed_keys() != (KEY::UP | KEY::SELECT)) && (input.pressed_keys() != (KEY::DOWN | KEY::SELECT)) && hot_item == id && active_item == id;
