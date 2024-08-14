@@ -521,16 +521,32 @@ public:
         
         std::string &text_input = virtual_keyboard_data->text_input;
         const size_t max_size = virtual_keyboard_data->max_size;
-        const char *keys[] = {"A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"};
         label(text_input.c_str());
         nextline();
-        for(int x = 0; x < UI_ARRAY_SIZE(keys); x++) {
-            if(button(keys[x]) && (text_input.size() < max_size || max_size == 0))
-                virtual_keyboard_data->text_input.append(keys[x]);
+
+        const std::vector<std::vector<std::string>> keys = {
+            {"A", "Z", "E", "R", "T", "Y", "U", "I", "O", "P"},
+            {"Q", "S", "D", "F", "G", "H", "J", "K", "L", "M"},
+            {"W", "X", "C", "V", "B", "N"},
+            {"    ", "<-"}, 
+        };
+        for(int y = 0; y < keys.size(); y++) {
+            for(int x = 0; x < keys[y].size(); x++) {
+                const std::string key = keys[y][x];
+                
+                if(button(keys[y][x].c_str())) {
+                    if(key == "<-" && virtual_keyboard_data->text_input.size() > 0)
+                        text_input.pop_back();
+                    else if(text_input.size() < max_size || max_size == 0) {
+                    if(key == "    ")
+                        virtual_keyboard_data->text_input.append(" ");
+                    else
+                        virtual_keyboard_data->text_input.append(keys[y][x].c_str());
+                    }
+                }
+            }
+            nextline();
         }
-        if(button("<-") && virtual_keyboard_data->text_input.size() > 0)
-            text_input.pop_back();
-        nextline();
         if(button("OK")) {
             delete virtual_keyboard_data;
             virtual_keyboard_data = nullptr;
