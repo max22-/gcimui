@@ -11,6 +11,9 @@ UI::Context& ui = UI::Context::get();
 int page = 0;
 
 void menu() {
+    ui.begin_container("margin");
+    ui.h_space(20);
+    ui.end_container();
     ui.begin_container("column1");
     ui.label("button");
     ui.nextline();

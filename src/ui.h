@@ -502,6 +502,14 @@ public:
         return virtual_keyboard_data == nullptr && hot_item == id && active_item == id;
     }
 
+    void h_space(int w) {
+        update_cursor(Vec2<int>(w, 0));
+    }
+
+    void v_space(int h) {
+        update_cursor(Vec2<int>(0, h));
+    }
+
     void begin_container(const char *name) {
         push_container();
     }
