@@ -11,6 +11,18 @@ UI::Context& ui = UI::Context::get();
 int page = 0;
 
 void menu() {
+    ui.begin_container("column1");
+    ui.label("button");
+    ui.nextline();
+    ui.label("int");
+    ui.nextline();
+    ui.label("float");
+    ui.nextline();
+    ui.label("listbox");
+    ui.nextline();
+    ui.label("textbox");
+    ui.end_container();
+    ui.begin_container("column2");
     if(ui.button("page 1"))
         page = 1;
     ui.nextline();
@@ -27,6 +39,7 @@ void menu() {
     static std::string text = "HELLO";
     if(ui.input_text(text, 0))
         printf("new text: %s\n", text.c_str());
+    ui.end_container();
 }
 
 void page1() {
